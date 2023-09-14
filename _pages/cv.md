@@ -11,14 +11,14 @@ redirect_from:
 
 Contact
 ======
-* Centre de Biophysique Moléculaire, Rue Charles Sadron CS 80054, 45071 Orléans CEDEX 2, France
+* Centre de Biophysique Moléculaire (CBM), CNRS UPR4301, Rue Charles Sadron CS 80054, 45071 Orléans CEDEX 2, France
 * E-mail address: marcin.suskiewicz@cnrs-orleans.fr
 * Work phone number: +33 (0) 2 38 25 59 23
 
 Current position
 ======
-* 01.01.2023  Co-leader of the research group ‘Protein PTMs and DNA repair: structure, function, and dynamics’ with Bertrand Castaing at the CBM, CNRS – Orléans, France
-* 01.11.2021  Chercheur CNRS (permanent scientist) at the French National Centre for Scientific Research, CNRS, Centre de Biophysique Moléculaire (CBM), UPR4301, CNRS – Orléans, France
+* 01.01.2023  Co-leader of the research group ‘Protein PTMs and DNA repair: structure, function, and dynamics’ with Bertrand Castaing at the CBM, Orléans, France
+* 01.11.2021  Chercheur (permanent scientist) at the French National Centre for Scientific Research (CNRS)
 
 Previous positions
 ======
