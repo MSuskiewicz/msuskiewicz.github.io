@@ -14,5 +14,7 @@ I'm a structural and molecular biologist and biochemist interested in protein mo
 
 At the CBM, I supervise the ERC Starting Grant project "SUMOwriteNread" dedicated to molecular mechanisms of a protein post-translational modification called SUMOylation. Additonally, together with Bertrand Castaing, I lead a research group, "Protein post-translational modifications and DNA repair: structure, functions, and dynamics".
 
+I'm affiliated with the ATIP-Avenir programme and Le Studium Loire Valley Institute for Advanced Studies.
+
 I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK and Austria. Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small Polish online cultural magazine, pismosuma.pl, which is published very irregularly. I like being with family and friends, reading, walking, and tea.
 
