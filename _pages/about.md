@@ -1,6 +1,6 @@
 ---
 permalink: /
-title: "Peronal website - Marcin J. Suskiewicz"
+title: "About"
 excerpt: "About me"
 author_profile: true
 redirect_from: 
