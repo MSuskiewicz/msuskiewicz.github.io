@@ -10,7 +10,7 @@ Selected publications
 ------
 I'll try to update this part in the next weeks, adding one paper a week, together with a short summary (14.09.2023).
 
-**Structural insights into the regulation of the human E2∼ SUMO conjugate through analysis of its stable mimetic**
+**Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic**
 
 Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉ 
 
