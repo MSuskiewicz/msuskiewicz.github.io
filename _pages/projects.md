@@ -14,7 +14,7 @@ What is protein SUMOylation? Small ubiquitin-like modifiers (SUMOs), discovered 
 
 The project is funded by a European Research Council (ERC) Starting Grant granted by the European Union through their Horizon Europe programme. The project is active from January 2023 until December 2027. Our budget is € 1 493 515. "SUMOwriteNread" is focussed on a protein modification called SUMOylation. 
 
-<img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='300' />
+<img src="https://msuskiewicz.github.io/images/LOGO_ERC-FLAG_FP.png" width='300' />
 
 Other projects
 ------
