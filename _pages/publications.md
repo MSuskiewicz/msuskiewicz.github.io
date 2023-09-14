@@ -10,7 +10,9 @@ Selected publications
 ------
 I'll try to update this part in the next weeks, adding one paper a week, together with a short summary (14.09.2023).
 
-* **Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic**.  Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉ , *Journal of Biological Chemistry*, 2023 299(7). <a href="https://www.jbc.org/article/S0021-9258(23)01898-7/fulltext">Link to the open-access article</a>
+* **Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic**.<br />
+  Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉<br />
+  *Journal of Biological Chemistry*, 2023 299(7). <a href="https://www.jbc.org/article/S0021-9258(23)01898-7/fulltext">Link to the open-access article</a>
 
   During ubiquitylation and related reactions, ubiquitin or a related modifier is first loaded on a Cys residue in an E2 enzyme, producing an E2-modifier thioester. The modifier is discharged from there onto a Lys residue in a protein substrate, often with the help of an E3 ligase.
 
