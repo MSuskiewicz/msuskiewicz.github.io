@@ -13,13 +13,9 @@ I supervise a project "SUMOwriteNread" dedicated to mechanisms of protein SUMOyl
 
 <img
   src="https://erc.europa.eu/sites/default/files/2023-06/LOGO_ERC-FLAG_FP.png"
-  style="display: inline-block; margin: 0 auto; max-width: 300px">
+  style="display: inline-block; margin: 0 auto; max-width: 150px">
 
 I also act as a supervisor on a small project funded by La Ligue contre le Cancer, dedicated to the understanding of the cellular consequences of SUMOylation of PARP1, an important DNA damage sensor in human cells and a target of cancer therapeutics. This project is active in 2023 and has a budget of € 25 000.
-
-<img
-  src="fr.wikipedia.org/wiki/Ligue_nationale_contre_le_cancer#/media/Fichier:LALIGUE_LOGO_C_RVB_V.tif"
-  style="display: inline-block; margin: 0 auto; max-width: 300px"> 
 
 Additionally, we have several other active small projects related to protein modifications and protein interactions.
 
