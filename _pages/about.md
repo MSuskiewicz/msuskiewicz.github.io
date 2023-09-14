@@ -24,5 +24,5 @@ The river Loire in Orléans in summer 2023 (above) and autumn 2022 (below)
 
 I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK (my studies and then a postdoc in the Ivan Ahel lab) and Austria (PhD and a postdoc in the Tim Clausen lab). 
 
-Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small and very irregular Polish online cultural magazine, pismosuma.pl. I enjoy being with family and friends, reading, walking, and tea. I live eith my family in the Saint Marceau district of Orléans and go to a local parish there. 
+Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small and very irregular Polish online cultural magazine, pismosuma.pl. I enjoy being with family and friends, reading, walking, and tea. I live with my family in the Saint Marceau district of Orléans and go to a local parish there. 
 
