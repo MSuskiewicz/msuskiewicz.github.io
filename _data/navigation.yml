@@ -9,9 +9,11 @@ main:
   
   - title: "Group"
     url: /group/
+
+  - title: "Publications"
+    url: /publications/    
  
   - title: "Contact and CV"
     url: /cv/
 
-  - title: "Publications"
-    url: /publications/    
+ 
