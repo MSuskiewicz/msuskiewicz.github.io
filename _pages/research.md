@@ -1,6 +1,6 @@
 ---
 layout: archive
-title: "Research interests"
+title: "Research"
 permalink: /cv/
 author_profile: true
 redirect_from:
