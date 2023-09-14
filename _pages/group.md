@@ -9,7 +9,7 @@ redirect_from:
 
 I'm very lucky to be a member of the research group "Protein post-translational modifications and DNA repair: structure, function, and dynamics" at the CBM, Orléans, France. Together with Bertrand Castaing, I serve as a co-leader of this group. A part of the group is implicated in the "SUMOwriteNread" project, which I independently supervise.
 
-The current members of the group in an alphabetical order: Bertrand Castaing, Franck Coste, Norbert Garnier, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
+The current members of the group, in the alphabetical order, are: Bertrand Castaing, Franck Coste, Norbert Garnier, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
 
 <img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='550' />
 
