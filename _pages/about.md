@@ -16,5 +16,5 @@ At the CBM, I supervise the ERC Starting Grant project "SUMOwriteNread" dedicate
 
 I'm affiliated with the ATIP-Avenir programme and Le Studium Loire Valley Institute for Advanced Studies.
 
-I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK and Austria. Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small Polish online cultural magazine, pismosuma.pl, which is published very irregularly. I like being with family and friends, reading, walking, and tea.
+I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK (my studies and then a postdoc in the Ivan Ahel lab) and Austria (PhD and a postdoc in the Tim Clausen lab). Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small Polish online cultural magazine, pismosuma.pl, which is published very irregularly. I like being with family and friends, reading, walking, and tea.
 
