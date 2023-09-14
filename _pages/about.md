@@ -8,6 +8,9 @@ redirect_from:
   - /about.html
 ---
 
-I specialise in structural biology and biochemistry of protein post-translational modifications (SUMOylation, ubiquitylation, ADP-ribosylation, phosphorylation), especially with regards to how they are catalysed by dedicated enzymes and how they impact cellular processes such as DNA repair, transcription, and protein degradation. More broadly, I am interested in all biological processes regulated by interactions between macromolecules. I try to understand these processes at different levels, from atomic to systemic. I have a subsidiary professional interest in philosophy and history of science.
+My name is Marcin J. Suskiewicz and this is my personal professional website.
 
+I'm a structural and molecular biologist and biochemist. I work as a CNRS researcher, an independent projet leader, and a group co-leader at the Centre de Biophysique Moléculaire, Orléans. I supervise the ERC Starting Grant project "SUMOwriteNread" dedicated to molecular mechanisms of a protein post-translational modification called SUMOylation. Additonally, together with Bertrand Castaing, I lead a research group, "Protein post-translational modifications and DNA repair: structure, functions, and dynamics". 
+
+I live in Orléans, France, but my roots trace back to Poland. Privately, I have a family, am a lay dominican, and an editor of a Polish online cultural magazine, pismosuma.pl. I like being with family and friends, reading, walking, and tea.
 
