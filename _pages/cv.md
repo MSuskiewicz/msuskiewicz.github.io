@@ -39,7 +39,3 @@ Internships and short projects
 * 2009  3-month summer project in Sir Philip Cohen’s group, MRC PPU, Dundee, Scotland, UK
 * 2008  5-week summer project in Mariusz Jaskólski’s group, Polish Academy of Sciences, Poznań, Poland
 * 2006  2-week "shadowing" training in Zygmunt Wasylewski's group, Jagiellonian University, Kraków, Poland
-
-Publications
-======
-https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en
