@@ -11,7 +11,7 @@ I'm very lucky to be a member of the research group "Protein post-translational 
 
 The current members of the group in an alphabetical order: Bertrand Castaing, Franck Coste, Norbert Garnier, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
 
-<img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='200p' />
+<img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='200' />
 
 A group photo from June 2023
 
