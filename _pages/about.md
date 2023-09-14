@@ -18,7 +18,9 @@ I'm affiliated with the ATIP-Avenir programme and Le Studium Loire Valley Instit
 
 <img src="https://msuskiewicz.github.io/images/orleans.png" width="550" />
 
-The river Loire in Orléans in summer 2023
+The river Loire in Orléans in summer 2023 (above) and autumn 2022 (below)
+
+<img src="https://msuskiewicz.github.io/images/377909867_842458323853037_4869866763854428718_n.jpg" width="550" />
 
 I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK (my studies and then a postdoc in the Ivan Ahel lab) and Austria (PhD and a postdoc in the Tim Clausen lab). 
 
