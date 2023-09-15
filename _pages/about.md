@@ -12,7 +12,7 @@ Thank you for visiting my personal (but mostly professional) website.
 
 I'm a structural and molecular biologist and biochemist interested in protein modifications and interactions. I work as a researcher at the Centre de Biophysique Moléculaire (CBM) in Orléans. The CBM is a unit of the CNRS (French National Centre for Scientific Research) tasked with research at the interface of biology, chemistry, and physics. It is located on the outskirts of the city of Orléans in the Loire Valley region of France.
 
-<img src="https://images/240px-Centre_national_de_la_recherche_scientifique.svg.png" width="200" />
+<img src="https://msuskiewicz.github.io/images/240px-Centre_national_de_la_recherche_scientifique.svg.png" width="200" />
 
 At the CBM, I supervise the project "SUMOwriteNread" dedicated to molecular mechanisms of a protein post-translational modification (PTM) called SUMOylation. Additonally, I'm a member of a research group, "Protein post-translational modifications and DNA repair: structure, functions, and dynamics", which, since recently, I co-lead together with its long-time leader Bertrand Castaing.
 
