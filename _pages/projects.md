@@ -16,7 +16,7 @@ What is protein SUMOylation? Small ubiquitin-like modifiers (SUMOs), discovered 
 
 The project is funded by a European Research Council (ERC) Starting Grant (ID 101078837) from the European Union, as part of the Horizon Europe programme. It is active from January 2023 until December 2027. Our budget amounts to € 1 493 515.
 
-<img src="https://msuskiewicz.github.io/images/LOGO_ERC-FLAG_FP.png" width='200' />
+<img src="https://msuskiewicz.github.io/images/LOGO_ERC-FLAG_FP.png" width='300' />
 
 Other projects
 ------
