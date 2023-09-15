@@ -4,7 +4,7 @@ title: "Publications"
 permalink: /publications/
 author_profile: true
 ---
-The complete list of my publications can be found on my Google Scholar profile: https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en
+You can view my full list of publications on <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">my Google Scholar profile</a>.
 
 Selected publications
 ------
