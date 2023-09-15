@@ -23,7 +23,7 @@ Current position
 Previous positions
 ======
 * 2018 – 2021  EMBO Long-Term Fellow (post-doctoral fellow) in Ivan Ahel’s group, Sir William Dunn School of Pathology, University of Oxford, United Kingdom
-* 2015 – 2018  Post-Doctoral Fellow (funded from ERC Advanced Grant) in Tim Clausen’s group, Research Institute of Molecular Pathology, IMP, Vienna, Austria
+* 2015 – 2018  Post-Doctoral Fellow in Tim Clausen’s group, Research Institute of Molecular Pathology, IMP, Vienna, Austria
 * 2011 – 2015  PhD student in Tim Clausen’s group, Research Institute of Molecular Pathology, IMP, Austria
 
 Education
