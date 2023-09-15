@@ -7,7 +7,7 @@ redirect_from:
   - /about/
   - /about.html
 ---
-<img src="https://msuskiewicz.github.io/images/240px-Centre_national_de_la_recherche_scientifique.svg.png" align="right" width="100" />Thank you for visiting my personal (but mostly professional) website.
+Thank you for visiting my personal (but mostly professional) website.
 
 I'm a structural and molecular biologist and biochemist interested in protein modifications and interactions. I work as a researcher at the Centre de Biophysique Moléculaire (CBM) in Orléans. The CBM is a unit of the CNRS (French National Centre for Scientific Research) tasked with research at the interface of biology, chemistry, and physics. It is located on the outskirts of the city of Orléans in the Loire Valley region of France.
 
