@@ -7,6 +7,8 @@ redirect_from:
   - /resume
 ---
 
+Protein post-translational modifications and DNA repair: structure, function, and dynamics
+------
 I'm very lucky to be a member of the research group "Protein post-translational modifications and DNA repair: structure, function, and dynamics" at the CBM, Orléans, France. Since January 2023, I serve as a co-leader of this group, together with its long-time leader, Bertrand Castaing. A part of the group is implicated in the "SUMOwriteNread" project, which I independently supervise.
 
 The current members of the group, in the alphabetical order, are: Bertrand Castaing, Franck Coste, Norbert Garnier, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
