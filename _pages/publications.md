@@ -6,7 +6,7 @@ author_profile: true
 ---
 You can view my full list of publications on <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">my Google Scholar profile</a>.
 
-Selected publications
+Summaries of selected publications
 ------
 I'll try to update this part in the next weeks, adding one paper a week, together with a short summary (14.09.2023).
 
