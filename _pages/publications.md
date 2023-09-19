@@ -12,7 +12,7 @@ I'll try to update this part in the next weeks, adding one paper a week, togethe
 
 * **Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic**<br />
   Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉<br />
-  *Journal of Biological Chemistry*, 2023 299(7)<br />
+  *Journal of Biological Chemistry*, 2023, 299(7)<br />
   <a href="https://www.jbc.org/article/S0021-9258(23)01898-7/fulltext">Link to the open-access article</a>
 
   During ubiquitylation and related reactions, ubiquitin or a related modifier is first loaded on a Cys residue in an E2 enzyme, producing an E2-modifier thioester. The modifier is discharged from there onto a Lys residue in a protein substrate, often with the help of an E3 ligase.
@@ -29,6 +29,8 @@ I'll try to update this part in the next weeks, adding one paper a week, togethe
 
 * **Updated protein domain annotation of the PARP protein family sheds new light on biological function**<br />
   Suskiewicz, M. J. ✉✱, Munnur, D.✱, Strømland, Ø.✱, Yang, J. C., Easton, L. E., Chatrin, C., Zhu, K., Baretić, D., Goffinont, S., Schuller, M., Wu, W.-F., Elkins, J. M., Ahel, A., Sanyal, S., Neuhaus, D., Ahel, I. ✉<br />
+  *Nucleic Acids Research*, 2023, 51(15):8217-8236<br />
+  <a href="https://academic.oup.com/nar/article/51/15/8217/7199335">Link to the open-access article</a>
 
   In this side-project paper, we carefully analysed AlphaFold2 models of human members of the PARP protein family, made a comprehensive domain annotation, made new insights into structure & function, and experimentally validated some of them.
 
