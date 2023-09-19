@@ -27,6 +27,8 @@ I'll try to update this part in the next weeks, adding one paper a week, togethe
 
   It's part of a larger line of research where we're trying different biochemical and chemical ways of stabilising SUMOylation complexes. It's the first publication from our SUMOwriteNread project. Our engineer Stéphane Goffinont played the first fiddle (thanks and congratulations!), with assistance from Franck Coste (crystal structure), Pierre Prieu-Serandon, and the rest of the team.
 
+  We have <a href="http://cbm.cnrs-orleans.fr/en/actualite/structural-insights-into-the-sumoylation-reaction-2/">a short popular description of the article in English</a> on our Centre's website.
+
 * **Updated protein domain annotation of the PARP protein family sheds new light on biological function**<br />
   Suskiewicz, M. J. ✉✱, Munnur, D.✱, Strømland, Ø.✱, Yang, J. C., Easton, L. E., Chatrin, C., Zhu, K., Baretić, D., Goffinont, S., Schuller, M., Wu, W.-F., Elkins, J. M., Ahel, A., Sanyal, S., Neuhaus, D., Ahel, I. ✉<br />
   *Nucleic Acids Research*, 2023, 51(15):8217-8236<br />
@@ -40,5 +42,5 @@ I'll try to update this part in the next weeks, adding one paper a week, togethe
   
   In the  introduction, we tried to explain in a simple way the principles behind AlphaFold2 and introduce various recent easy-to-use tools for protein analysis. Hopefully this part might be interesting even for people working on some other protein families.
 
-  The Institute of Chemistry of the CNRS has dedicated to this paper a nice <a href="https://www.inc.cnrs.fr/fr/cnrsinfo/lintelligence-artificielle-pour-predire-la-forme-des-proteines">news & views article in French</a>.
+  The Institute of Chemistry of the CNRS has dedicated to this paper a nice <a href="https://www.inc.cnrs.fr/fr/cnrsinfo/lintelligence-artificielle-pour-predire-la-forme-des-proteines">news & views article in French</a>, and we have <a href="http://cbm.cnrs-orleans.fr/en/actualite/combining-computers-and-experiments-to-study-the-domain-composition-and-function-of-the-parp-protein-family-2/">a short note in English</a> on our Centre's website, too.
   
