@@ -8,7 +8,7 @@ author_profile: true
 Full list of publications
 ------
 
-Publications are listed in a chronological order from oldest to newest.
+Publications are listed in a chronological order from the oldest to the most recent.
 
 ✱ - equal contribution; ✉ - corresponding author; 🅡 – review article; 🅝 – news & views article; 🅟 – pre-print 
 
