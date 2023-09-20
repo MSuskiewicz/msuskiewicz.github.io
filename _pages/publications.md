@@ -10,11 +10,7 @@ Full list of publications
 
 Publications are listed in a chronological order from oldest to newest.
 
-✱ - equal contribution
-✉ - corresponding author
-🅡 – review article
-🅝 – news & views article
-🅟 – pre-print 
+✱ - equal contribution; ✉ - corresponding author; 🅡 – review article; 🅝 – news & views article; 🅟 – pre-print 
 
 1.	**Suskiewicz, M. J.**, Sussman, J. L.✉, Silman, I. & Shaul, Y.✉ Context-dependent resistance to proteolysis of intrinsically disordered proteins. Protein Sci. 20, 1285–1297 (2011). 🅡
 2.	**Suskiewicz, M. J.** & Clausen, T.✉ Chemical biology interrogates protein arginine phosphorylation. Cell Chem. Biol. 23, 888–890 (2016). 🅝
