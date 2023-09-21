@@ -9,7 +9,7 @@ redirect_from:
 
 {% include base_path %}
 
-Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as the time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly on scientific articles I've read.
+Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly on scientific articles I've read.
 
 Protein homodimerisation (20/09/2023)
 ------
