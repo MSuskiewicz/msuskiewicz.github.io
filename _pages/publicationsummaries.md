@@ -6,7 +6,8 @@ author_profile: true
 ---
 
 
-**Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic**<br />
+Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic
+------
 Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉<br />
 *Journal of Biological Chemistry*, 2023, 299(7)<br />
 <a href="https://www.jbc.org/article/S0021-9258(23)01898-7/fulltext">Link to the open-access article</a>
@@ -25,7 +26,8 @@ It's part of a larger line of research where we're trying different biochemical 
 
 We have <a href="http://cbm.cnrs-orleans.fr/en/actualite/structural-insights-into-the-sumoylation-reaction-2/">a short popular description of the article in English</a> on our Centre's website.
 
-**Updated protein domain annotation of the PARP protein family sheds new light on biological function**<br />
+Updated protein domain annotation of the PARP protein family sheds new light on biological function
+------
 Suskiewicz, M. J. ✉✱, Munnur, D.✱, Strømland, Ø.✱, Yang, J. C., Easton, L. E., Chatrin, C., Zhu, K., Baretić, D., Goffinont, S., Schuller, M., Wu, W.-F., Elkins, J. M., Ahel, A., Sanyal, S., Neuhaus, D., Ahel, I. ✉<br />
 *Nucleic Acids Research*, 2023, 51(15):8217-8236<br />
 <a href="https://academic.oup.com/nar/article/51/15/8217/7199335">Link to the open-access article</a>
