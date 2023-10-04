@@ -11,6 +11,9 @@ redirect_from:
 
 Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly on scientific articles I've read.
 
+Back to Grenoble
+------
+We're going to Grenoble today, just me and a colleague, for a couple of days, to do some SAXS experiments at the synchrotron. I think it's been about 12 years since I first visited the ESRF synchrotron. It was before my PhD, during an internship I did in the group of Joel L. Sussman at the Weizmann Institute in Israel. We spent a few days in Grenoble, collecting data for two days or so and also doing a little bit of sight-seeing (we took a cable car to a base beneath Mont Blanc and stopped in Chambéry). I remember the Hebrew word "maruah" that we used when poorly diffracting crystals gave a smeary pattern. In addition to it being the first time at a synchrotron, it was one of the first encounters with France. Eating croissants in the ESRF guesthouse for breakfast, little did I know that I would one day live and work in France. I've been to Grenoble a few times since, but not in the last 5.5 years or so, so I'm happy to go back. And it's the first time I'll do SAXS there.
 
 Aviesan 'Membrane-less organelles and liquid condensates' symposium, Paris 25th September 2023 (26/09/2023)
 ------
