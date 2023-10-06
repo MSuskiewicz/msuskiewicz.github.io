@@ -9,7 +9,11 @@ redirect_from:
 
 {% include base_path %}
 
-Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly on scientific articles I've read.
+Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
+
+Nobels 2023 (06/10/2023)
+------
+Like every year, I've been eagerly awaiting Nobel awards. Like everybody else, I was very happy to hear that Katalin Karikó and Drew Weissman were awarded, especially Karikó, but what I think made me even happier was the Nobel prize in literature awarded to Jon Fosse, a Norwegian writer whose thick Sepatalogy I began reading some time ago and which has enhanted me in some special way.
 
 Grenoble revisited (04/10/2023)
 ------
