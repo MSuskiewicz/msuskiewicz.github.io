@@ -13,7 +13,7 @@ Chances are that this blog will die at some point. It will be regularly updated 
 
 Nobels 2023 (06/10/2023)
 ------
-Like every year, I've been eagerly awaiting Nobel awards. Like everybody else, I was very happy to hear that Katalin Karikó and Drew Weissman were awarded, especially Karikó, but what I think made me even happier was the Nobel prize in literature awarded to Jon Fosse, a Norwegian writer whose thick Sepatalogy I began reading some time ago and which has enhanted me in some special way.
+Like every year, I'd been eagerly awaiting the announcement of Nobel prizes. Like everybody else, I was very happy to hear that Katalin Karikó and Drew Weissman were awarded, especially Karikó, but what I think made me even happier was the Nobel prize in literature awarded to Jon Fosse, a Norwegian writer whose thick *Sepatalogy* I began reading some time ago and which has enchanted me in a special way. A running joke is that Fosse's new novel is easy to read, because you just need to read one sentence (there are no full stops in the whole long book). Well, easy it is not, but it is a particularly convincing example of a stream-of-consciousness narrative, and the writing has a singular trance-inducing rythm.
 
 Grenoble revisited (04/10/2023)
 ------
