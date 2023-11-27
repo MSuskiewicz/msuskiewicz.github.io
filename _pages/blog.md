@@ -11,6 +11,15 @@ redirect_from:
 
 Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+At home and away (27/11/2023)
+------
+I do enjoy travelling, although much less since I have a family, unless, of course, we can go together. The last two months or so have been a period of several work-related trips, mostly short and nearby (all by train), but still amounting to quite some time away from home and the lab, and only one of the trips was together with my family.
+
+One, alone, was to a local conference organised mainly by and for scientists from Tours and Orléans, the yearly Colloque Biotechnocentre. It was its 35th edition already. The conference is held in French and takes place on two consecutive days, with an evening (with a party) in between. There are poster sessions for PhD students and talks by invited guests from outside the region and local scientists, both more senior and PhDs. I had a short talk entitled 'Why we study protein SUMOylation?', or rather 'Pourquoi étudier la SUMOylation des protéines ?', because it was the first proper scientific talk that I've given in French, with much fear and trembling. But it was a nice experience in the end, having managed to do it and seeing that I have been mostly understandable. I enjoyed this particular yearly conference very much. I like its broad scope in terms of topics but at the same time the regional focus, and I like the multi-generational make-up, with both older (some retired for some time) and young scientists, and last but not least the fact that it combines a scientific programme with a party and long French-style meals etc. At the same time it is relatively modest and not too expensive. I was very impressed by PhD students - their talks and posters were very well prepared and well presented and the atmosphere was friendly. By the way, I had a very similar impression at a PhD defence I attended in Rennes as a member of a jury in early November - of being impressed by the PhD students, both the one defending (she did it great), but also those attending the small party afterwards, being there for her.
+
+
+
+
 Nobels 2023 (06/10/2023)
 ------
 Like every year, I'd been eagerly awaiting the announcement of Nobel prizes. Like everybody else, I was very happy to hear that Katalin Karikó and Drew Weissman were awarded, especially Karikó, but what I think made me even happier was the Nobel prize in literature awarded to Jon Fosse, a Norwegian writer whose thick *Sepatalogy* I began reading some time ago and which has enchanted me in a special way. A running joke is that Fosse's new novel is easy to read, because you just need to read one sentence (there are no full stops in the whole long book). Well, easy it is not, but it is a particularly convincing example of a stream-of-consciousness narrative, and the writing has a singular trance-inducing rythm.
