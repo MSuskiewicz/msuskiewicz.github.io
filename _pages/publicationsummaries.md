@@ -15,6 +15,8 @@ Suskiewicz, M. J., Prokhorova, E., Rack, J.G.M., Ahel, I.✉<br />
 
 A new comprehensive review on ADP-ribosylation written together with former colleagues from the Ivan Ahel group at the Dunn School in Oxford. ADP-ribosylation is a fundamental biochemical modification reaction where ADP-ribose is transferred from NAD+ to a substrate (typically a protein). Multiple rounds of ADP-ribosylation can result in the formation of poly(ADP-ribose) chains. ADP-ribose modification can regulate various aspects of biomolecular function, particularly interactions. As there are several protein domains and motifs that recognise ADP-ribosylation, the modification can induce new protein:protein interactions. Inhibitors of the main human ADP-ribosylation enzyme, PARP1, have been successfully used in the clinics to target specific cancer types. In this review, written over the last several months, we attempted to cover a large ground, spanning chemistry, structural biology, enzymatic mechanisms, various cellular pathways, and finally clinical applications.
 
+I am happy with this review except for the positive charge (plus) sign that stayed by accident on detached nicotinamide in the first figure.
+
 Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic
 ------
 Goffinont, S., Coste, F., Prieu-Serandon, P., Mance, L., Gaudon, V., Garnier, N., Castaing, B., Suskiewicz, M. J. ✉<br />
