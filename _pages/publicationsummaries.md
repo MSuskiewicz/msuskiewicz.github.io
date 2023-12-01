@@ -33,7 +33,7 @@ And now a further twist. DTX3L turns out to have nucleic acid-binding domains. I
 
 An important point: these studies describe fairly robust and specific in vitro reactions, but they remain to be demonstrated in the cell.
 
-And the last point. I am aware that in schematics in both papers there is a mistake in the formula of ADP-ribose: one ribose has wrong stereochemistry. The error originates with me and is embarassing considering I have worked on ADP-ribose for a few years now.  I apologise to Kang and other colleagues who, by trusting me, have copied or overlooked this error. I hope this will not distruct the reader from Kang's elegant experiments and their fascinating conclusions.
+And the last point. I am aware that in schematics in both papers there is a mistake in the formula of ADP-ribose: one ribose has wrong stereochemistry. The error originates with me and is embarassing considering I have worked on ADP-ribose for a few years now. I am grateful to a chemist in the room when I gave a talk last summer who pointed out to me something I have always overlooked. I apologise to Kang and other colleagues who, by trusting me, have copied or overlooked this error. I hope this will not distruct the reader from Kang's elegant experiments and their fascinating conclusions.
 
 ADP-ribosylation from molecular mechanisms to therapeutic implications
 ------
