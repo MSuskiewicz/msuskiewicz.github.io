@@ -9,7 +9,7 @@ Here I will share short informal discussions of the most recent papers (and mayb
 
 DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids. 
 ------
-Kang, Z.✉, Suskiewicz, M.J., Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D.✉, Ahel, I.✉<br />
+Kang, Z. ✉, Suskiewicz, M.J., Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D. ✉, Ahel, I. ✉<br />
 *Nucleic Acids Research*, 24 November 2023, gkad1119<br />
 <a href="https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkad1119/7449489">Link to the open-access article</a>
 
