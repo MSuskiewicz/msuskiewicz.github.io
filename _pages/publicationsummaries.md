@@ -7,15 +7,45 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
+DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids. 
+------
+Kang, Z.✉, Suskiewicz, M.J., Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D.✉, Ahel, I.✉<br />
+*Nucleic Acids Research*, 24 November 2023, gkad1119<br />
+<a href="https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkad1119/7449489">Link to the open-access article</a>
+
+This is a continuation of <a hre="https://www.science.org/doi/10.1126/sciadv.add4253">a study published last year and available here</a>. Both were spearheaded by Kang and Ivan with contribution from other authors including some from me, especially on the previous paper. I was also very happy that this became a collaboration with another scientist from CBM Orléans, our great chemist friend, Vincent Aucagne.
+
+For those of you who are not familiar with ADP-ribosylation, I should maybe start by saying that NAD+ is not only a central energy molecule in the cell, but it can also be used for a particular type of protein modification called ADP-ribosylation, catalysed by the family of enzymes called PARPs. During ADP-ribosylation a small part of NAD+ called nicotinamide is leaving and the rest of NAD+ (the ADP-ribose part) becomes covalently attached to a protein through the carbon to which nicotinamide was attached.
+
+A few PARPs seem to be pseudoenzymes that are actually inactive. One of those is PARP9, which makes a constitutive complex with a ubiquitin E3 ligase DTX3L. I said that PARP9 seems inactive, but when it is together with DTX3L and when ubiquitin cascade components are present (an E1 enzyme, an E2 enzyme, ATP), a robust reaction between NAD+ and ubiquitin is observed, as demonstrated by the Paschal group six years ago.
+
+In the presence of these components (PARP9, DTX3L, E1, E2, and ATP), NAD+ (or a part of it) becomes somehow joined with ubiquitin. So what is this reaction? It was proposed to be ADP-ribosylation of ubiquitin: nicotinamide presumably leaves from NAD+, the ADP-ribose part of NAD+ becomes attached to ubiquitin through the carbon atom on ADP-ribose to which nicotinamide was attached. Just like in any other protein ADP-ribosylation event catalysed by PARPs.
+
+I should say that a few years later the Huang group - and especially Chatrin Chatrin, who has since joined Ivan's group and is a co-author on Kang's NAR paper - showed that, in fact, PARP9 is dispensible for the reaction. You do need a DTX protein - either DTX3L or one of its human homologous from the DTX family - as well as E1, E2, and ATP. A minimal fragment of DTX3L that you need is the RING domain and an adjecent NAD+/ADP-ribose binding domain called DTC.
+
+So what did Kang's two papers bring to this story? They showed - to my mind conclusively - that this mysterious in vitro reaction between NAD+ and ubiquitin that DTX proteins catalyse is not canonical ADP-ribosylation. Nicotinamide is not leaving, NAD+ stays intact, and ubiquitin becomes covalently linked through an esther bond to one of the ribose hydroxyl groups of NAD+. Vincent Aucagne (with some assistance from Hervé Meudal from our NMR platform) has been instrumental in identifying where Ub becomes attached.
+
+You do not displace nicotinamide during the reaction, and, in fact, nicotinamide does not need to be present at all. Thus, the DTX reaction actually also works with ADP-ribose. In fact, ADP-ribose is preferred over NAD+ as a substrate. And - most interestingly - DTX enzymes can ubiquitylate ADP-ribose that is attached to a protein or a peptice through a prior ADP-ribosylation reaction.
+
+This is new chemistry, and potentially very cool one, because you ubiquitylate a protein not on a lysine residue, which would be typical, but on an ADP-ribose post-translational modification. And as a result you get a dual ubiquitin-ADP-ribose modification that could perhaps have its own distinct function in the cell?
+
+And now a further twist. DTX3L turns out to have nucleic acid-binding domains. It has recently been shown that some PARPs can ADP-ribosylate not only proteins but also nucleic acids (whether that actually happens in the cell is not clear yet). So could  DTX3L ubiquitylate ADP-ribose that is attached to nucleic acids? It turns out it can, and it does so more robustly if a full-length protein with nucleic acid-binding domains is used.
+
+An important point: these studies describe fairly robust and specific in vitro reactions, but they remain to be demonstrated in the cell.
+
+And the last point. I am aware that in schematics in both papers there is a mistake in the formula of ADP-ribose: one ribose has wrong stereochemistry. The error originates with me and is embarassing considering I have worked on ADP-ribose for a few years now.  I apologise to Kang and other colleagues who, by trusting me, have copied or overlooked this error. I hope this will not distruct the reader from Kang's elegant experiments and their fascinating conclusions.
+
 ADP-ribosylation from molecular mechanisms to therapeutic implications
 ------
 Suskiewicz, M. J., Prokhorova, E., Rack, J.G.M., Ahel, I.✉<br />
 *Cell*, 2023, Oct 12;186(21):4475-95.<br />
 <a href="https://www.sciencedirect.com/science/article/pii/S0092867423009625">Link to the open-access article</a>
 
-A new comprehensive review on ADP-ribosylation written together with former colleagues from the Ivan Ahel group at the Dunn School in Oxford. ADP-ribosylation is a fundamental biochemical modification reaction where ADP-ribose is transferred from NAD+ to a substrate (typically a protein). Multiple rounds of ADP-ribosylation can result in the formation of poly(ADP-ribose) chains. ADP-ribose modification can regulate various aspects of biomolecular function, particularly interactions. As there are several protein domains and motifs that recognise ADP-ribosylation, the modification can induce new protein:protein interactions. Inhibitors of the main human ADP-ribosylation enzyme, PARP1, have been successfully used in the clinics to target specific cancer types. In this review, written over the last several months, we attempted to cover a large ground, spanning chemistry, structural biology, enzymatic mechanisms, various cellular pathways, and finally clinical applications.
+A new comprehensive review on ADP-ribosylation written together with former colleagues from the Ivan Ahel group at the Dunn School in Oxford (I'm very grateful to Ivan for this opportunity and Evgeniia and Johannes for the work together). 
 
-I am happy with this review except for the positive charge (plus) sign that stayed by accident on detached nicotinamide in the first figure.
+ADP-ribosylation is a fundamental biochemical modification reaction where ADP-ribose is transferred from NAD+ to a substrate (typically a protein). Multiple rounds of ADP-ribosylation can result in the formation of poly(ADP-ribose) chains. ADP-ribose modification can regulate various aspects of biomolecular function, particularly interactions. As there are several protein domains and motifs that recognise ADP-ribosylation, the modification can induce new protein:protein interactions. Inhibitors of the main human ADP-ribosylation enzyme, PARP1, have been successfully used in the clinics to target specific cancer types. In this review, written over the last several months, we attempted to cover a large ground, spanning chemistry, structural biology, enzymatic mechanisms, various cellular pathways, and finally clinical applications.
+
+I am happy with this review except for the positive charge (plus) sign that was put by accident at the production stage on detached nicotinamide in the first figure.
 
 Structural insights into the regulation of the human E2∼SUMO conjugate through analysis of its stable mimetic
 ------
