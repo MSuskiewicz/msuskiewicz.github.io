@@ -25,7 +25,7 @@ I should say that a few years later the Huang group - and especially Chatrin Cha
 
 So what did Kang's two papers bring to this story? They showed - to my mind conclusively - that this mysterious in vitro reaction between NAD+ and ubiquitin that DTX proteins catalyse is not canonical ADP-ribosylation. Nicotinamide is not leaving, NAD+ stays intact, and ubiquitin becomes covalently linked through an esther bond to one of the ribose hydroxyl groups of NAD+. Vincent Aucagne (with some assistance from Hervé Meudal from our NMR platform) has been instrumental in identifying where Ub becomes attached.
 
-You do not displace nicotinamide during the reaction, and, in fact, nicotinamide does not need to be present at all. Thus, the DTX reaction actually also works with ADP-ribose. In fact, ADP-ribose is preferred over NAD+ as a substrate. And - most interestingly - DTX enzymes can ubiquitylate ADP-ribose that is attached to a protein or a peptice through a prior ADP-ribosylation reaction.
+You do not displace nicotinamide during the reaction, and, in fact, nicotinamide does not need to be present at all. Thus, the DTX reaction actually also works with ADP-ribose. In fact, ADP-ribose is preferred over NAD+ as a substrate. And - most interestingly - DTX enzymes can ubiquitylate ADP-ribose that is attached to a protein or a peptide through a prior ADP-ribosylation reaction.
 
 This is new chemistry, and potentially very cool one, because you ubiquitylate a protein not on a lysine residue, which would be typical, but on an ADP-ribose post-translational modification. And as a result you get a dual ubiquitin-ADP-ribose modification that could perhaps have its own distinct function in the cell?
 
