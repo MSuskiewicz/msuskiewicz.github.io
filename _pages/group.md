@@ -13,8 +13,8 @@ I'm very lucky to be a member of the research group "Protein post-translational 
 
 The current (01/02/2024) members of the group (including permanent members, PhD students, and master students), in the alphabetical order, are: Aanchal Mishra, Ana Gil Quevedo, Bertrand Castaing, Franck Coste, Ibtissam Talhaoui, Norbert Garnier, Ophélie Delobre, Sana El Massoudi, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
 
-<img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='550' />
-
 A group photo from June 2023
+
+<img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='550' />
 
 The group website (which we will try to update soon) can be found at: http://cbm.cnrs-orleans.fr/en/research/research-teams/equipe-aspects-moleculaires-du-vivant/dna-repair-structure-fonction-and-dynamic/
