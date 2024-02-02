@@ -15,7 +15,7 @@ The current (01/02/2024) members of the group (including permanent members, PhD 
 
 A group photo from the end of January 2024:
 
-<img src="https://github.com/MSuskiewicz/msuskiewicz.github.io/blob/master/images/jan2024.jpg" width='550' />
+<img src="https://msuskiewicz.github.io/images/jan2024.jpg" width='550' />
 
 A group photo from June 2023:
 
