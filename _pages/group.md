@@ -13,7 +13,11 @@ I'm very lucky to be a member of the research group "Protein post-translational 
 
 The current (01/02/2024) members of the group (including permanent members, PhD students, and master students), in the alphabetical order, are: Aanchal Mishra, Ana Gil Quevedo, Bertrand Castaing, Franck Coste, Ibtissam Talhaoui, Norbert Garnier, Ophélie Delobre, Sana El Massoudi, Stéphane Goffinont, Virginie Gaudon, Marcin Suskiewicz, Lucija Mance.
 
-A group photo from June 2023
+A group photo from the end of January 2024:
+
+<img src="https://github.com/MSuskiewicz/msuskiewicz.github.io/blob/master/images/jan2024.jpg" width='550' />
+
+A group photo from June 2023:
 
 <img src="https://msuskiewicz.github.io/images/F0k-gfYWAAAE4hH.jpg" width='550' />
 
