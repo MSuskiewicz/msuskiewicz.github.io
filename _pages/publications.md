@@ -30,7 +30,7 @@ Publications are listed in a chronological order from the oldest to the most rec
 19.	*Suskiewicz, M. J.✉✱*, Munnur, D.✱, Strømland, Ø.✱, Yang, J.-C., Easton, L. E., Chatrin, C., Zhu, K., Baretić, D., Goffinont, S., Schuller, M., Wu, W.-F., Elkins, J. M., Ahel, D., Sanyal, S., Neuhaus, D. & Ahel, I.✉ Updated protein domain annotation of the PARP protein family sheds new light on biological function. *Nucleic Acids Res.* gkad514. doi:10.1093/nar/gkad514 (2023)
 20.	 *Suskiewicz, M. J.*, Prokhorova, E., Rack, J.G.M., Ahel, I.✉ ADP-ribosylation from molecular mechanisms to therapeutic implications. *Cell*. Oct 12;186(21):4475-95. (2023) 🅡
 21.	 Kang, Z.✉, *Suskiewicz, M.J.*, Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D.✉, Ahel, I.✉ DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids. *Nucleic Acids Research*. 24 November, gkad1119, doi:10.1093/nar/gkad1119 (2023)
-22.	 *Suskiewicz, M.J.✉* The logic of protein post-translational modifications (PTMs): Chemistry, mechanisms and evolution of protein regulation through covalent attachments. *BioEssays*. 21 January, doi:10.1002/bies.202300178 (2024)
+22.	 *Suskiewicz, M.J.✉* The logic of protein post-translational modifications (PTMs): Chemistry, mechanisms and evolution of protein regulation through covalent attachments. *BioEssays*. 21 January, doi:10.1002/bies.202300178 (2024) 🅡
 
 The most recent publications might be missing - please visit <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">my Google Scholar profile</a>.
 
