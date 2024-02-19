@@ -11,6 +11,13 @@ redirect_from:
 
 Chances are that this blog will die at some point. It will be regularly updated initially, and less and less as time goes by. Alas, that's what usually happens. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Modelling oligomerisation with AlphaFold (19/02/2024)
+------
+Paper from Emmanuel D. Levy and his group are always very interesting. <a href="https://www-sciencedirect-com.insb.bib.cnrs.fr/science/article/pii/S009286742400059X">This study</a>, now published in its final version, is about modelling protein oligomers in a high-throughput manner using AlphaFold2. It's worth a read, not only because of the excel file with predicted oligomerisation symmetries for most human proteins and those from three other species (E. coli, P. furiosus, S. cerevisiae). 
+The approach the authors took to predict oligomeric states of proteins with AlphaFold2 with reasonable computational resources was to first model dimers, analyse the confidence scores, and - if those were sufficiently high - analyse symmetry of the dimers. Dimers with head-to-head (C2) symmetry were identified as potentially just dimers, while dimers with head-to-tail symmetry were identify as potentially ring- or filament-forming. By extrapolating the head-to-tail dimeric models, possible numbers of protomers in a ring were proposed (trimer, hexamer, decamer, etc.), or  - if the oligomer didn't close into a ring - a protein was suggested to form a filament. Interestingly, a standard version of AF2 - trained on single protein chains - was used instead of the 'multimer' one, as the gain with the latter was apparently limited and to avoid the situation where the training PDB set contains quarternary structures that the study predicts. Like always in the Levy lab papers there are many interesting general observations, like e.g. that the number of possible tertiary folds seems much more limited than the number of possible quaternary arrangements - AF2 identifies many new quaternary but few new tertiary structures.
+One should note that not all possible oligomeric architectures are covered by the adopted approach: higher-order arrangements built of symmetric C2 dimers would not be predicted, for example.
+All in all, it's a very interesting paper with a lot of new information.
+
 PARP1 condensates (12/02/2024)
 ------
 PARP1 is the DNA-damage sensor that binds to DNA breaks and synthesises protein modification made from long poly(ADP-ribose) (PAR) chains. It is also my friend since my second postdoc, when I worked on PARP1 and its interactor HPF1 - a very interesting protein, by the way, which forms a composite active site together with PARP1 and changes the way it makes PAR chains.
