@@ -10,7 +10,7 @@ redirect_from:
 ERC Starting Grant SUMOwriteNread (2023-2027)
 ------
 
-The "SUMOwriteNread" project, dedicated to mechanisms of protein SUMOylation and its functional consequences, currently involves a PhD student, Lucija Mance, permanent engineers, Stéphane Goffinont and Franck Coste, and myself as a supervisor. We receive a lot of help from other group members and other scientists from the CBM and beyond.  
+The "SUMOwriteNread" project, dedicated to mechanisms of protein SUMOylation and its functional consequences, currently involves PhD students, Lucija Mance and Aanchal Mishra, a postdoc, El hadji Cisse, permanent engineers, Stéphane Goffinont and Franck Coste, and myself as a supervisor. We receive a lot of help from other group members and other scientists from the CBM and beyond.
 
 What is protein SUMOylation? Small ubiquitin-like modifiers (SUMOs), discovered about 25 years ago, are members of the superfamily of ubiquitin-like proteins. We speak of protein SUMOylation when these proteins become covalently attached to intracellular target proteins, modifying their function, location or stability. SUMOylation plays an essential role in many biological functions and has strong links to disease, especially cancer. SUMOylation typically depends on enzymes called E3 ligases. Few SUMO E3 enzymes have been identified and characterised. The ERC-funded SUMOwriteNread project will fill this gap, identifying the structure and mechanism of action of some SUMO E3 ligases, developing approaches to identify and characterise new SUMO E3s, investigate mechanisms by which the specificity of SUMOylation is achieved, and finally to investigate the functional impact of SUMOylation in terms of triggering new protein:protein interactions.
 
