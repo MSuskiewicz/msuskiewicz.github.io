@@ -7,7 +7,20 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
-DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids. 
+Dynamic BTB-domain filaments promote clustering of ZBTB proteins
+------
+Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. Dynamic BTB-domain filaments promote clustering of ZBTB proteins. *Molecular Cell*, 84(13), 2490-2510. (2024).
+<a href="https://authors.elsevier.com/a/1jPbE3vVUPRmMR">Link to the open-access article</a>. If the previous link does not work, you can access the authors' version <a href="https://hal.science/hal-04631262/file/Mance%20ZBTB%20HAL%20deposition.pdf">here</a>
+
+In this paper, we show that BTB domains of ZBTB proteins incl. ZBTB8A or ZBTB18 make homomultimers, which concentrates them in nuclear foci and contributes to their function as repressors. We demonstrate & characterise this property using crystallography, various biophysical methods, and some cell biology. BTB filaments are built of head-to-head dimers connected tail to tail. They differ in topology from head-to-tail filaments formed by known polymerising domains such as SAM. These differences have implications for evolution & prediction of filaments, as discussed in our paper.
+
+We got interested in ZBTBs, for we work on a PTM called SUMOylation, and they are among the most highly SUMOylated proteins. We thought the BTB domains might interact with the SUMO E2 enzyme, UBC9. Instead, they make filaments, which might indirectly promote SUMOylation (we're now working on this).
+
+Among other things, the fact that we found a filamentation propensity in a protein family that has been considered relatively well characterised suggests that there are more filament-forming proteins than we currently think. One reasons to think so is that filament-forming proteins are frequently insoluble upon recombinant overexpression, and therefore difficult to study. It's exciting times for this field, because AlphaFold can sometimes predict this tendency, thus facilitating the search for new filament-forming proteins. The tendency to form filaments might explain some instances of foci formation in cells - an alternative, or perhaps complementary, explanation to phase separation.
+
+It was great fun to make this chance discovery and build a project around it. It started as a master & now PhD project of Lucija Mance, a great PhD student. Many thanks to Franck, Sébastien, Martine, and all other great coauthors and collaborators from Orléans, Rennes, Paris/Gif-sur-Yvette, Marseille. And we are also very happy that we could coordinate a back-to-back publication with Paul Park, Jiho Park, Fischer and Ebert groups from Dana-Farber/Harvard. <a href="https://t.co/40qobXIsml">Their paper</a> has just been published as well.
+
+DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids
 ------
 Kang, Z. ✉, Suskiewicz, M.J., Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D. ✉, Ahel, I. ✉<br />
 *Nucleic Acids Research*, 24 November 2023, gkad1119<br />
