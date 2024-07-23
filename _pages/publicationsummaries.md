@@ -9,7 +9,8 @@ Here I will share short informal discussions of the most recent papers (and mayb
 
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
-Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. Dynamic BTB-domain filaments promote clustering of ZBTB proteins. *Molecular Cell*, 84(13), 2490-2510. (2024).
+Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. <br />
+Dynamic BTB-domain filaments promote clustering of ZBTB proteins. *Molecular Cell*, 84(13), 2490-2510. (2024).<br />
 <a href="https://authors.elsevier.com/a/1jPbE3vVUPRmMR">Link to the open-access article</a>. If the previous link does not work, you can access the authors' version <a href="https://hal.science/hal-04631262/file/Mance%20ZBTB%20HAL%20deposition.pdf">here</a>
 
 In this paper, we show that BTB domains of ZBTB proteins incl. ZBTB8A or ZBTB18 make homomultimers, which concentrates them in nuclear foci and contributes to their function as repressors. We demonstrate & characterise this property using crystallography, various biophysical methods, and some cell biology. BTB filaments are built of head-to-head dimers connected tail to tail. They differ in topology from head-to-tail filaments formed by known polymerising domains such as SAM. These differences have implications for evolution & prediction of filaments, as discussed in our paper.
