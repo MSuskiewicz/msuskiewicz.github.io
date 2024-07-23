@@ -31,6 +31,8 @@ Publications are listed in a chronological order from the oldest to the most rec
 20.	 *Suskiewicz, M. J.*, Prokhorova, E., Rack, J.G.M., Ahel, I.✉ ADP-ribosylation from molecular mechanisms to therapeutic implications. *Cell*. Oct 12;186(21):4475-95. (2023) 🅡
 21.	 Kang, Z.✉, *Suskiewicz, M.J.*, Chatrin, C., Strømland, Ø., Dorsey, B. W., Aucagne, V., Ahel, D.✉, Ahel, I.✉ DELTEX E3 ligases ubiquitylate ADP-ribosyl modification on nucleic acids. *Nucleic Acids Research*. 24 November, gkad1119, doi:10.1093/nar/gkad1119 (2023)
 22.	 *Suskiewicz, M.J.✉* The logic of protein post-translational modifications (PTMs): Chemistry, mechanisms and evolution of protein regulation through covalent attachments. *BioEssays*. 21 January, doi:10.1002/bies.202300178 (2024) 🅡
+23.	 Zhu, K., Chatrin, C., *Suskiewicz, M.*, Aucagne, V., Ahel, D., & Ahel, I. (2024). Ubiquitylation of nucleic acids by DELTEX ubiquitin E3 ligase DTX3L. *bioRxiv*, 2024-04 (2024). 🅟
+24.	 Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. Dynamic BTB-domain filaments promote clustering of ZBTB proteins. *Molecular Cell*, 84(13), 2490-2510. (2024).
 
 The most recent publications might be missing - please visit <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">my Google Scholar profile</a>.
 
