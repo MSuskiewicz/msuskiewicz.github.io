@@ -9,8 +9,8 @@ Publications are listed in an inverse chronological order from the most recent t
 
 ✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print 
 
-27.	Bergoug, M., Mosrin, C., Godin, F., Doudeau, M., Sosic, I., Suskiewicz, M. J., Vallée, B. and Bénédetti, H.✉ An Atypical Mechanism of SUMOylation of Neurofibromin SecPH Domain Provides New Insights into SUMOylation Site Selection. The Journal of Molecular Biology (accepted 08/2024).
-26.	Zhu, K.✉, Chatrin, C., Suskiewicz, M. J., Aucagne, V., Ahel, D.✉, Ahel, I.✉ Ubiquitylation of nucleic acids by specific DELTEX E3 ligases. EMBO Reports (accepted 08/2024).
+'27.'	Bergoug, M., Mosrin, C., Godin, F., Doudeau, M., Sosic, I., Suskiewicz, M. J., Vallée, B. and Bénédetti, H.✉ An Atypical Mechanism of SUMOylation of Neurofibromin SecPH Domain Provides New Insights into SUMOylation Site Selection. The Journal of Molecular Biology (accepted 08/2024).
+'26.'	Zhu, K.✉, Chatrin, C., Suskiewicz, M. J., Aucagne, V., Ahel, D.✉, Ahel, I.✉ Ubiquitylation of nucleic acids by specific DELTEX E3 ligases. EMBO Reports (accepted 08/2024).
 25.	Mance, L., Bigot, N., Sánchez, E.Z., Coste, F.✉, Martín-González, N., Zentout, S., Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., & Suskiewicz, M.J.✉ Dynamic BTB-domain filaments promote clustering of ZBTB proteins. Molecular Cell, 84(13), pp.2490-2510, (2024).
 24.	Zhu, K.✉, Chatrin, C., Suskiewicz, M., Aucagne, V., Ahel, D.✉ and Ahel, I.✉. Ubiquitylation of nucleic acids by DELTEX ubiquitin E3 ligase DTX3L. bioRxiv, pp.2024-04, (2024). 🅟
 23.	Suskiewicz, M.J.✉ The logic of protein post‐translational modifications (PTMs): Chemistry, mechanisms and evolution of protein regulation through covalent attachments. BioEssays, 46(3), p.2300178, (2024). 🅡
