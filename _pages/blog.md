@@ -15,7 +15,7 @@ Seeing before knowing how to do (11/12/2024)
 ------
 I have stumbled upon this graph, by a modern realistic painter Marc Dalessio, from <a href="https://www.marcdalessio.com/self-portraits-over-the-years-2/">his website</a>. It is about a situation where your ability to paint better has not yet developed, but you can already see more than before and, therefore, are more critical of your current work. According to him, such moments of increased criticism generally precede moments of improvement - for him as a painter, in any case. I thought that it might apply to scientists as well, offering some comfort to those who have been plagued by frequent bouts of self-criticism. 
 
-<img src="https://msuskiewicz.github.io/images/portrait-graph.PNG" width='300' />
+<img src="https://msuskiewicz.github.io/images/portrait-graph.PNG" width='500' />
 
 November update (23/11/2024)
 ------
