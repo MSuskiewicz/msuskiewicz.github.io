@@ -11,6 +11,12 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Seeing before knowing how to do (11/12/2024)
+------
+I have stumbled upon this graph, by a modern realistic painter Marc Dalessio, from <a href="https://www.marcdalessio.com/self-portraits-over-the-years-2/">his website</a>. It is about a situation where your ability to paint better has not yet developed, but you can already see more than before and, therefore, are more critical of your current work. According to him, such moments of increased criticism generally precede moments of improvement - for him as a painter, in any case. I thought that it might apply to scientists as well, offering some comfort to those who have been plagued by frequent bouts of self-criticism. 
+
+<img src="https://msuskiewicz.github.io/images/portrait-graph.PNG" width='300' />
+
 November update (23/11/2024)
 ------
 The last time I wrote anything here was just before the EMBO ubiquitin conference held in Cavtat, Croatia. The conference marked an important moment in my life, as it was the first larger conference at which I presented the work done by my colleagues and myself since I started my permanent position in France. Also, and perhaps more importantly, it was the first confernece to which several of us - members of my current research group - went together. Going together as a team to a conference is always special, and when you are partially responsible for the scientific direction of the team, it is extra stressful but also more of an adventure. We shared two little apartments we rented, and the walk to and from the conference venue. We sat next to each other in most talks, then discussed what we heard. The place was beautiful, the atmosphere - welcoming and exciting. I saw some people I'd seen before, others that I'd only heard about, or read their name on publications - so that you can put a face, so to speak, to the name and to the science that you've known. And I've met some old friends, particularly from the group where I did my PhD.
