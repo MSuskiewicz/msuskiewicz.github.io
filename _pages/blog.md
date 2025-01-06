@@ -11,6 +11,31 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Nonscientific reading 2024 (06/01/2025)
+------
+In 2024, I kept, for the first time, I think, a clear record of all booked I read, in a chronological order. For many years now, I have a diary, where I write quite a lot every week, and now at the back of it I added a list where I put down the titles I've read. It’s hard to compare with previous years, but it seems like 2024 was a good reading year for me — at least compared to other years since starting a family. I don’t have much time to read nonscientific things, and most of it happens on the tram during my commute back from work or a bit before bed. I try to keep notes on my reading in my diary, which takes some extra time. For this list, I’ve included not only things I read by myself but also longer children’s books I read with my daughters (two by Kästner and one by a forgotten Polish author Buyno-Arctowa; we’re currently reading another Kästner). The books are a mix of Polish and English (some of them translated into one of these two languages from another). There wasn’t a specific theme or method to my choices — reading has become a “sphere of freedom” for me, guided by intuition or chance, and I like to read something random from time to time. That said, I also try to read books that are gifted or recommended to me. One book that stood out for me this year was a biography of the film director Éric Rohmer. It allowed me to dive into an art form I know little about and explore one creator’s life and work. My wife and I also watched some of his films available at our local library. I've written about it in one of the posts below. I’m glad I tried Trollope this year, an author I hadn’t read before; I'd like to read some more. I also enjoyed the first volume of Stefan Swieżawski’s memoirs (he was a historian of philosophy from Poland). There are two more volumes to go, which I hope to finish in 2025. Some books were short (which can be motivating when keeping a reading list!), but two were longer — the one on Rohmer and the one on Péguy. 
+
+Does nonscientific reading have any impact on how we approach science? I like to think it does. At the very least, it helps with writing. But I believe it can do more: it can shape the way we think, structure arguments, and imagine models and metaphors. It can also teach us to observe more keenly, nurture curiosity, and even offer lessons in morality. One of the books I read this year was an essay by Christopher Dawson on the beginnings of the Oxford Movement. For those unfamiliar, the Oxford Movement was an episode in the history of Christian theology. Dawson highlights that the movement’s courageous pioneers (well, one of them in any case) were/was inspired by the medieval ideal of chivalry — understood as a selfless and brave dedication to a chosen goal and moral integrity, even in the face of difficulty and criticism. This ideal could be inspiring for scientists as well, couldn't it.
+
+Books read in 2024:
+
+    Éric Rohmer: A Biography, Antoine de Baecque & Noël Herpe (English, trans. from French)
+    Tajemnica Frontenaków, François Mauriac (Polish, trans. from French)
+    Anatolin, Hans-Ulrich Treichel (Polish, trans. from German)
+    Uległość, Michel Houellebecq (Polish, trans. from French)
+    Emil i detektywi, Erich Kästner (Polish, trans. from German)
+    Miguel Street, V. S. Naipaul (English)
+    Fantomy, Maria Kuncewiczowa (Polish)
+    The Spirit of the Oxford Movement, Christopher Dawson (English)
+    Carnal Spirit: The Revolutions of Charles Péguy, Matthew W. Maguire (English)
+    The first three volumes of Tintin (French)
+    Mania czy Ania, Erich Kästner (Polish, trans. from German)
+    Wielki przełom: 1907–1945, Stefan Swieżawski (Polish)
+    Kocia mama, Maria Buyno-Arctowa (Polish)
+    Nie mówię żegnaj, Han Kang (Polish, trans. from Korean)
+    The Autobiography, Anthony Trollope (English)
+    Can You Forgive Her?, Anthony Trollope (English)
+
 Seeing before knowing how to do (11/12/2024)
 ------
 I have stumbled upon this graph, by a modern realistic painter Marc Dalessio, from <a href="https://www.marcdalessio.com/self-portraits-over-the-years-2/">his website</a>. It is about a situation where your ability to paint better has not yet developed, but you can already see more than before and, therefore, are more critical of your current work. According to him, such moments of increased self-criticism generally precede moments of improvement - for him as a painter, at any rate. If seeing differently is actually required to paint differently - but is not by itself sufficient and requires the hand to learn to follow the eye, so to speak - this seems to make sense. I thought that it might apply to scientists as well, offering some comfort to those who are plagued by frequent bouts of self-criticism, as many scientists probably are. 
