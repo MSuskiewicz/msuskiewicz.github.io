@@ -17,7 +17,7 @@ In 2024, I kept, for the first time, I think, a clear record of all booked I rea
 
 Does nonscientific reading have any impact on how we approach science? I like to think it does. At the very least, it helps with writing. But I believe it can do more: it can shape the way we think, structure arguments, and imagine models and metaphors. It can also teach us to observe more keenly, nurture curiosity, and even offer lessons in morality. One of the books I read this year was an essay by Christopher Dawson on the beginnings of the Oxford Movement. For those unfamiliar, the Oxford Movement was an episode in the history of Christian theology. Dawson highlights that the movement’s courageous pioneers (well, one of them in any case) were/was inspired by the medieval ideal of chivalry — understood as a selfless and brave dedication to a chosen goal and moral integrity, even in the face of difficulty and criticism. This ideal could be inspiring for scientists as well, couldn't it.
 
-Books read in 2024:
+Nonscientific books read in 2024:
 
     Éric Rohmer: A Biography, Antoine de Baecque & Noël Herpe (English, trans. from French)
     Tajemnica Frontenaków, François Mauriac (Polish, trans. from French)
