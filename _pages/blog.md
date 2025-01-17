@@ -11,7 +11,7 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
-Two condensate paper (17/01/2025)
+Two condensate papers (17/01/2025)
 ------
 The cell is not homogenous and, even disregarding the different specific organelles, it has areas of higher or lower concentration of various components, with many denser bodies or foci composed of proteins and other macromolecules. Many cellular components thus are not evenly distributed but concentrate in such distinct bodies/foci - despite those not being delimited by a memberane. We thus speak of the propensity to cluster or condense; we speak of condensates.
 I'm mostly interested in proteins, and more specifically, coming from structural biology, I tend to focus on folded protein domains and interactions in which at least one of the two partners is such a domain (the other can also be a folded domain, or a short peptidic motif that folds upon binding, or a non-protein molecule, e.g. a nucleic acid). Do such canonical interactions explain condensate formation? There are many examples where it looks like they do. We ourselves have worked on protein domains that have an ability to homomultimerise in a chain-like manner, and this propensity is required for concentrating a particular class of proteins (transcription factors called ZBTB) into foci in cells.
