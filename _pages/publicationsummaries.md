@@ -7,6 +7,10 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
+RING dimerisation drives higher-order organisation   of SINA/SIAH E3 ubiquitin ligases
+------
+
+
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
 Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. <br />
