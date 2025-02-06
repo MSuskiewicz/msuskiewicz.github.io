@@ -7,15 +7,31 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
-RING dimerisation drives higher-order organisation   of SINA/SIAH E3 ubiquitin ligases
+RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases
 ------
+Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, *Suskiewicz, M.J.✉*<br />
+RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases. *The FEBS Journal*, 5/2/2025.<br />
+<a href="https://onlinelibrary.wiley.com/share/author/PQKJINMAM3JJFT69AN5P?target=10.1111/febs.70000">Link to the article</a>. If the previous link does not work to grant open access, you can access the authors' version <a href="https://hal.science/hal-04931763">here</a>
 
+Happy to share our new study showing that the Ub E3 ligase SIAH1, which has been known to dimerise via its C-term SBD, also dimerises via its N-term RING. When these tendencies combine in the full-length protein, SIAH1 forms multimers, which might explain its clustering in cells & preference for aggregated/multimeric substrates.
+
+The project started when Zosia was a summer student, & we discussed the great paper by Słabicki et al. The ubiquitylation of BCL6 by SIAH1 is boosted when BCL6 gets multimerised by a small molecule. Why is SIAH1 preferentially targetting the multimeric version of a protein? We reasoned that SIAH1 might also be a multimer & recognise multimers through avidity.
+
+We crystallised and Franck solved the crystal structure of the dimer formed by the RING-ZnF1 part of SIAH1. We confirmed dimerisation in solution with SEC-RALS/LALS, & validated the V90R mutation as blocking RING dimerisation. Aanchal did some lovely AlphaFold modelling showing dimerisation across the SINA/SIAH family. One should add that the SINA/SIAH family is present across many species from plants to humans and is highly conserved. What we say of SIAH1 in this paper, most likely applies to all family members, and we do perform some experiments with drosophila SINA and human SIAH2.
+
+Here's what happens in cells: mCherry-tagged SIAH1 (admittedly, somewhat overexpressed) localises to elongated clusters, but you need to have both RING and SBD for that, and no V90R mutation, otherwise SIAH1 is mostly diffuse. When we look at the colocalisation with an aggregated substrate, Synphilin-1, SIAH1 WT does colocalise, but this is largely prevented when we block RING domain dimerisation with the V90R mutation. This leads us to a model where multimerisation allows high-avidity binding to multivalent substrates.
+
+Lastly, Lucija performed nice in-vitro ubiquitylation assays showing that the V90R mutant of the RING-ZnF1 fragment is deficient in making long ubiquitin chains. So there is also a role for RING dimerisation in catalysing polyubiquitylation, as seen for other dimeric RING Ub E3s.
+
+Overall, this side project is related to our ongoing interest in how multimerisation of substrates and ligases - particularly filament formation - affects SUMOylation and ubiquitylation processes. I thank all colleagues and collaborators involved in this project and You for your attention ;).
+
+This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half.
 
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
 Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. <br />
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins. *Molecular Cell*, 84(13), 2490-2510. (2024).<br />
-<a href="https://authors.elsevier.com/a/1jPbE3vVUPRmMR">Link to the open-access article</a>. If the previous link does not work, you can access the authors' version <a href="https://hal.science/hal-04631262/file/Mance%20ZBTB%20HAL%20deposition.pdf">here</a>
+<a href="https://authors.elsevier.com/a/1jPbE3vVUPRmMR">Link to the article</a>. If the previous link does not work, you can access the authors' version <a href="https://hal.science/hal-04631262/file/Mance%20ZBTB%20HAL%20deposition.pdf">here</a>
 
 In this paper, we show that BTB domains of ZBTB proteins incl. ZBTB8A or ZBTB18 make homomultimers, which concentrates them in nuclear foci and contributes to their function as repressors. We demonstrate & characterise this property using crystallography, various biophysical methods, and some cell biology. BTB filaments are built of head-to-head dimers connected tail to tail. They differ in topology from head-to-tail filaments formed by known polymerising domains such as SAM. These differences have implications for evolution & prediction of filaments, as discussed in our paper.
 
