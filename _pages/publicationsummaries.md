@@ -27,6 +27,8 @@ Overall, this side project is related to our ongoing interest in how multimerisa
 
 This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half.
 
+<img src="https://msuskiewicz.github.io/images/Design4.png" width='200' />
+
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
 Mance, L., Bigot, N., Sánchez, E. Z., Coste, F.✉, Martín-González, N., Zentout, S.,  Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.-A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., *Suskiewicz, M. J.✉*. <br />
