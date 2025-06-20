@@ -11,6 +11,16 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Before a talk (20/06/2025)
+------
+Waiting in the park outside, watching people jogging, exercising. A young girl boxer is practicing with her coach, they are punching each other with boxing gloves. I've just passed a house with an inscription "Simone Weil philosophe a habité cette maison de 1929 a 1940" and tried talking photo of it with the zoom camera of my laptop, as I don' have a smartphone, to send it to a friend who is very fond of her.
+
+The second day of the annual SFBBM meeting in Paris won't start until 8.30 am (it's 7.20 am now), but I came from Orleans with the first train of the day just to make sure I'm not late as I'm the first one to give a talk today.  The first day yesterday was very nice - a wide range of topics and good quality of presentations and posters, some familiar faces whom its a pleasure to see again and talk to. The meeting is held in the pharmacy department, one of the late 19th century's "churches of science" meant to convey the spirit of positivism and scientism, complete with frescos and sculptures. The conference room itself is not in the best condition, the benches are a bit worn and the walls dusty, but that's part of the charm of the meeting - that it is relatively modest, using public spaces used normally by student and therefore cheaper to organise. Behind the building there is a lovely small botanical garden.
+
+I have a talk at 8.30 am and whenever I do, I sleep badly. I was woken up by my daughter at 3 am and didn't fall asleep. Practiced my talk a bit, went to the train station on foot, took the 5-o'clock train, arrived just after 6 am, and then wandered around Paris for an hour murmuring the talk to myself. I made a new introduction - tried to make it a bit interactive - let's see if it works out or not. I will speak about protein filaments made by ZBTB proteins and SIAH E3 ligases studied by us recently. I will ask people in the room to imagine they are proteins: if they can only use one hand to connect with each other, they can only make pairs, but if they can use both hands, depending on the angle between their two arms, they will make circles or chains. Et cetera. I will not ask people to actually do this but only imagine. It may be a complete fiasco, let's see.
+
+Will try to find some tea before it starts.
+
 Springtime in the lab (14/04/2025)
 ------
 Last week was beautifully sunny and warm. Spring has truly arrived, bringing new hope and joy. This week was supposed to be colder and rainier, and I guess it will be, but as I'm writing this, the spring sunrays are squeezing through holes in the roller blind. Hope and joy do not give in easily.
