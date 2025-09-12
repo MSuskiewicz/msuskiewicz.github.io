@@ -25,9 +25,10 @@ Lastly, Lucija performed nice in-vitro ubiquitylation assays showing that the V9
 
 Overall, this side project is related to our ongoing interest in how multimerisation of substrates and ligases - particularly filament formation - affects SUMOylation and ubiquitylation processes. I thank all colleagues and collaborators involved in this project and You for your attention ;).
 
-This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half.
+This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). We did go on <a href="https://febs.onlinelibrary.wiley.com/doi/10.1111/febs.17177">the FEBS J cover, but with a different image</a>. Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half.
 
 <img src="https://msuskiewicz.github.io/images/Design4.png" width='400' />
+
 
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
