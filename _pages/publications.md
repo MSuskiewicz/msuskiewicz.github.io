@@ -7,9 +7,11 @@ author_profile: true
 
 Publications are listed in an inverse chronological order from the most recent to the oldest.
 
-✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print 
+✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print; 🅒 – book chapter
 
-28. Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, Suskiewicz, M.J.✉ RING dimerisation drives higher-order organisation   of SINA/SIAH E3 ubiquitin ligases. The FEBS Journal, 5/2/2025.
+30. Cisse, E.H., Goffinont, S., Castaing, B., Suskiewicz, M.J.✉ Production and purification of SUMO-UBC9 and SUMO-RANGAP1CTD. In: SUMO: Methods and Protocols (Methods in Molecular Biology, vol. 2957), pp. 67–82 (2025). 🅒
+29. Mishra, A., Goffinont, S., Coste, F., Cisse, E.H., Mance, L., Castaing, B., Suskiewicz, M.J.✉ Fusion Protein-Assisted Crystallization of Human SUMO1. Proteins: Structure, Function, and Bioinformatics, 2025 May 23., doi: 10.1002/prot.26838
+28. Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, Suskiewicz, M.J.✉ RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases. The FEBS Journal, 5/2/2025.
 27.	Bergoug, M., Mosrin, C., Godin, F., Doudeau, M., Sosic, I., Suskiewicz, M. J., Vallée, B. and Bénédetti, H.✉ An Atypical Mechanism of SUMOylation of Neurofibromin SecPH Domain Provides New Insights into SUMOylation Site Selection. The Journal of Molecular Biology, 436(22), 168768.
 26.	Zhu, K.✉, Chatrin, C., Suskiewicz, M. J., Aucagne, V., Ahel, D.✉, Ahel, I.✉ Ubiquitylation of nucleic acids by specific DELTEX E3 ligases. EMBO Reports (accepted 08/2024).
 25.	Mance, L., Bigot, N., Sánchez, E.Z., Coste, F.✉, Martín-González, N., Zentout, S., Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., & Suskiewicz, M.J.✉ Dynamic BTB-domain filaments promote clustering of ZBTB proteins. Molecular Cell, 84(13), pp.2490-2510, (2024).
