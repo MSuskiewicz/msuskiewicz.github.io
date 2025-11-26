@@ -15,7 +15,7 @@ AI more generally (26/11/2025)
 ------
 "Die Erfahrung entdeckt im Menschen, so tief sie eindringen mag, immer wieder nur Menschliches, in der Welt nur Weltliches, in Gott nur Göttliches. Und nur in Gott Göttliches, nur in der Welt Weltliches, nur im Menschen Menschliches."
 
-("Experience discovers in human beings, however deeply it may penetrate, always and again only the human; in the world only the worldly; in God only the divine. And only in God the divine, only in the world the worldly, only in human beings the human", trans. Barbara E. Galli, just with 'human beings' swapped for 'man'.)
+("Experience discovers in human beings, however deeply it may penetrate, always and again only the human; in the world only the worldly; in God only the divine. And only in God the divine, only in the world the worldly, only in human beings the human", translation by Barbara E. Galli, just with 'human beings' swapped for 'man' by me.)
 
 Franz Rosenzweig, the famed German Jewish philosopher, wrote these words in his <i>Das neue Denken</i>, but I stumbled upon them in <a href="https://iupress.org/9780253351333/jewish-philosophy-as-a-guide-to-life/">Hilary Putnam's delightful little book <i>Jewish Philosophy as a Guide to Life</i></a>. I keep coming back to this quotation when reading yet another article about AI, for example, the short piece by <a href="https://www.nature.com/articles/d41586-025-03857-0">a man from Google in the latest Nature</a> (incidentally, it is interesting that this esteemed journal does not seem to realise the enormous conflict of interest when someone from a company investing billions in AI writes a quasi-philosophical text on AI).
 
