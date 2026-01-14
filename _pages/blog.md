@@ -11,6 +11,20 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+More filaments - with coiled-coils this time round (7/01/2026)
+------
+I enjoyed reading <a href="https://www.nature.com/articles/s42003-025-09396-8">this study</a> describing cryoEM structure of a NONO:SFPQ heterocomplex this morning, while it was snowing outside my window. How happy I was to read a paper in full (I have read only a handful of papers in full in the last weeks or even months, and some were to review). What a lovely thing to do: reading a paper...
+
+Interestingly, the (endogenous, I think?) complex was natively purified from hamster ovary cells, as NONO has a native histag-like HHQHHHQQHH. Cryo-EM shows lovely two-stranded filaments composed of heterodimers connected via coiled-coils. For most other proteins we would need to knock in a tag to be able to do that.
+
+We like filaments in our team, especially those of transcription factors. DBHS family of proteins to which NONO and SFPQ belong are not primarily TFs, but SFPQ does have a DNA-binding domain and has been suggested to activate and repress some genes. 
+
+We in our team believe that filaments are more common among TFs than it is currently thought. They might help with multivalent DNA binding or, conversely, sequester TFs away from DNA. Many other conceivable regulatory advantages.
+
+A potential general lesson from this particular study: a lot of proteins (including many TFs) have coiled-coils, which are often cut out to facilitate purification and crystallisation. Coiled-coils are usually thought to mediate defined oligomerisation (dimerization, tetramerization), but I think quite often they mediate formation of much larger multimeric filaments or lattices. This is a lovely example.
+
+Interestingly, the filaments seen in NONO:SFPQ Cryo-EM recapitulate contacts previous seen in crystals of these proteins – it does seem that, for filament-forming proteins, the crystallisation process often harnesses native multimerization properties. We like that, as we use X-ray cryst. a lot. But it is still vital to see the ‘solution’ structure with Cryo-EM – and in NONO:SFPQ case, it is only with EM that the complete superstructure and all the right contacts could be observed.
+
 AI more generally (26/11/2025)
 ------
 "Die Erfahrung entdeckt im Menschen, so tief sie eindringen mag, immer wieder nur Menschliches, in der Welt nur Weltliches, in Gott nur Göttliches. Und nur in Gott Göttliches, nur in der Welt Weltliches, nur im Menschen Menschliches."
