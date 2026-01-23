@@ -11,6 +11,25 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Parallels between machine learning in maths and biology? (20/01/2025)
+------
+I find the current developments in AI's use in mathematics interesting (see e.g. some recent posts by Terrence Tao on mathstodon.xyz/@tao, one of which I paste below). It does feel a bit like 'an AlphaFold moment' in the sense that suddenly you don't need hype and people see with naked eyes that in this particular branch of research machine learning is providing new possibilities.
+
+I used to love maths but know little of its professional academic side, so whatever I think of it is surely very naive. I am old enough to remember that prior to AI, computers were already helping to prove maths problems, like with Fermat's Last Theorem within certain range (prior to a general proof by Andrew Wiles), or a Four Colour problem, or, more recently, the Kepler's conjecture. But now it feels different, with 'reasoning LLMs', some ofthem maths specific, some general like ChatGTP 5.2 Pro, are offering proofs to complex problems, such as those on the Erdős list (for the summary of AI contribution to these problems, which exploded in recent months, see <a href='https://github.com/teorth/erdosproblems/wiki/AI-contributions-to-Erd%C5%91s-problems'>this site</a>). 
+
+While I very superficially understand all this, what I want to do in this blog is to consider an analogy between what is happening in maths now and what happened to structural biology with the arrival of AlphaFold (AF) a few years back. AF has not really invalidated any older approaches (it is still important to do experimental structural biology and other types of computational biology), nor is it infallible, requiring logical scrutiny and experimental validation. But it does change how things are done, even profoundly so, offering ways of doing things faster or in a more high-throughput way, especially in the realms where it managed to infer some higher-level rules (standard protein modelling) and in other realms to the extent that queries resemble bits of training set (e.g. antibody:antigen or protein:nucleic acid interactions seem currently to accurately work only if there is some homology to things already in the PDB, as far as I can tell, and as supported by these reports: 1, 2).
+
+Similarly, the use of AI for maths seems to mainly work through 'homology' so far (finding existing but overlooked solutions in old literature, applying known methods to new problems, seasoned with some brute-force computation), although some higher-level 'rules' will probably be locally found in some types of problems. With time limitations become apparent - and they probably will in the use of LLMs in maths - but the tool will have a profound impact, I am pretty sure of that (although the impact might also be partly negative, if the tools make people lose their skills or critical acumen, or become demotivated, or focus only on things attackable with AI to the neglect of other, really new problems). 
+
+What always remains most valuable is human attention: setting what is interesting, posing the question, critically evaluating/crosschecking, understanding and explaining to others the result, moving beyond limitations - and I think we will see that in maths too. When another revolution, cryoEM resolution one, took off in 2010s, what contributed a lot to progress alongside new tech was the old fashioned mol biol and biochem skills (sample preparation, optimisation). What fuels the AI revolution in maths seems to be the human ability to do maths by hand.
+
+Not to mention that currently most attempts to prove complex maths problems with AI yield incorrect results: you need ways to distinguish the rare correct ones, and understand their novelty (or unexpected triviality) etc. - something only an expert can do. Lastly, if all this AI business, generally speaking, is really about human-collected and -created data, and whether methods and insights extracted from them extend to new cases -- then it is clear that at some point one also needs new data, and every bit of new data is precious - in itself, and, secondarily, by adding to training sets. Doing things the slow way, manually, with reflection makes us notice and comment on things otherwise lost, hones our skills, gives time to think of other things in the background.
+
+I leave you with a quote from Terrence Tao that summarises his intuition on the current AI in maths situation:
+
+<img src=''></img>
+
+
 More filaments - with coiled-coils this time round (7/01/2026)
 ------
 I enjoyed reading <a href="https://www.nature.com/articles/s42003-025-09396-8">this study</a> describing cryoEM structure of a NONO:SFPQ heterocomplex this morning, while it was snowing outside my window. How happy I was to read a paper in full (I have read only a handful of papers in full in the last weeks or even months, and some were to review). What a lovely thing to do: reading a paper...
