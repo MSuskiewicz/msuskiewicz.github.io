@@ -27,7 +27,7 @@ Not to mention that currently most attempts to prove complex maths problems with
 
 I leave you with a quote from Terrence Tao that summarises his intuition on the current AI in maths situation:
 
-<img src='https://msuskiewicz.github.io/images/tao-screenshot.PNG'></img>
+<img src="https://msuskiewicz.github.io/images/tao-screenshot.PNG" />
 
 
 More filaments - with coiled-coils this time round (7/01/2026)
