@@ -32,6 +32,7 @@ HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
 ACIDIC_RESIDUES = {'D', 'E'}
 
 # Score thresholds for stratification
+SCORE_VERY_HIGH_THRESHOLD = 800
 SCORE_HIGH_THRESHOLD = 400
 SCORE_MEDIUM_THRESHOLD = 200
 
@@ -423,7 +424,8 @@ def process_file(input_file: str, output_file: str = None):
     if score_col in df.columns:
         df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
         cats = {
-            'High': df[df[score_col] >= SCORE_HIGH_THRESHOLD],
+            'VeryHigh': df[df[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+            'High': df[(df[score_col] >= SCORE_HIGH_THRESHOLD) & (df[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
             'Medium': df[(df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df[score_col] < SCORE_HIGH_THRESHOLD)],
             'Low': df[df[score_col] < SCORE_MEDIUM_THRESHOLD]
         }
