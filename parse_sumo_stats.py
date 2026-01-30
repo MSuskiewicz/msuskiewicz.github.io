@@ -21,6 +21,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 # =============================================================================
 # CONFIGURABLE PARAMETERS
@@ -36,10 +38,28 @@ SCORE_VERY_HIGH_THRESHOLD = 800
 SCORE_HIGH_THRESHOLD = 400
 SCORE_MEDIUM_THRESHOLD = 200
 
+# Parallel processing settings
+MAX_WORKERS = 10  # Number of concurrent threads
+
 # =============================================================================
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Global session for connection pooling
+_session = None
+_session_lock = Lock()
+
+def get_session() -> requests.Session:
+    global _session
+    if _session is None:
+        with _session_lock:
+            if _session is None:
+                _session = requests.Session()
+                adapter = requests.adapters.HTTPAdapter(pool_connections=MAX_WORKERS, pool_maxsize=MAX_WORKERS*2)
+                _session.mount('https://', adapter)
+                _session.mount('http://', adapter)
+    return _session
 
 AA_3TO1 = {
     'ALA': 'A', 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C',
@@ -57,7 +77,7 @@ def parse_uniprot_id(protein_id: str) -> tuple[str, int | None]:
 
 def safe_get(url: str, timeout: int = 30) -> requests.Response | None:
     try:
-        r = requests.get(url, timeout=timeout)
+        r = get_session().get(url, timeout=timeout)
         return r if r.status_code == 200 else None
     except Exception:
         return None
@@ -459,17 +479,38 @@ def process_file(input_file: str, output_file: str = None):
     protein_col = next((c for c in df.columns if str(c).lower() == 'protein'), 'Protein')
     position_col = next((c for c in df.columns if str(c).lower() == 'position'), 'Position')
 
-    cache, results = {}, []
-    for idx, row in df.iterrows():
-        if (idx + 1) % 50 == 0: logger.info(f"Processing {idx + 1}/{len(df)}")
+    # Shared cache (Python dict is thread-safe for basic get/set due to GIL)
+    cache = {}
+
+    def process_single_site(idx, row):
+        """Process a single site - called in parallel."""
         uid, iso = parse_uniprot_id(str(row[protein_col]).strip())
-        try: pos = int(row[position_col])
-        except: results.append({'used_id': uid, 'mapped_pos': None}); continue
+        try:
+            pos = int(row[position_col])
+        except:
+            return idx, {'used_id': uid, 'mapped_pos': None}
 
         struct, used_id, final_pos = resolve_structure_and_position(uid, iso, pos, cache)
         analysis = analyze_site(struct, final_pos)
         analysis.update({'used_id': used_id, 'mapped_pos': final_pos if final_pos != pos else None})
-        results.append(analysis); time.sleep(0.01)
+        return idx, analysis
+
+    # Process sites in parallel
+    results = [None] * len(df)
+    completed = 0
+    total = len(df)
+
+    print(f"Processing {total} sites with {MAX_WORKERS} workers...")
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(process_single_site, idx, row): idx for idx, row in df.iterrows()}
+
+        for future in as_completed(futures):
+            idx, analysis = future.result()
+            results[idx] = analysis
+            completed += 1
+            if completed % 100 == 0 or completed == total:
+                logger.info(f"Processed {completed}/{total} ({100*completed/total:.1f}%)")
 
     res_df = pd.DataFrame(results)
     cols_map = {
