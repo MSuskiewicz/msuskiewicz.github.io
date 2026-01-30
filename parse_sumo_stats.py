@@ -356,8 +356,9 @@ def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict 
 
     # 1. Category Statistics (Count, Mean Score, Std Score)
     data_list.append({'Metric': '=== CATEGORY COUNTS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-    for cat in cats:
-        subset = df[df['Category'] == cat]
+
+    # Helper function to add a row with stats
+    def add_stat_row(label, subset):
         count = len(subset)
         if count > 0 and score_col in df.columns:
             mean_score = subset[score_col].mean()
@@ -365,37 +366,68 @@ def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict 
         else:
             mean_score = 0.0
             std_score = 0.0
-
         data_list.append({
-            'Metric': cat,
+            'Metric': label,
             'Value': count,
             'Mean_Score': round(mean_score, 2) if not pd.isna(mean_score) else None,
             'Std_Score': round(std_score, 2) if not pd.isna(std_score) else None
         })
 
+    # Flexible categories
+    add_stat_row('Flexible_consensus', df[df['Category'] == 'Flexible_consensus'])
+    add_stat_row('Flexible_acidic_flank', df[df['Category'] == 'Flexible_acidic_flank'])
+    flex_all_acidic = df[df['Category'].isin(['Flexible_consensus', 'Flexible_acidic_flank'])]
+    add_stat_row('Flexible_all_acidic', flex_all_acidic)
+    add_stat_row('Flexible_neither', df[df['Category'] == 'Flexible_neither'])
+
+    data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+
+    # Structured categories
+    add_stat_row('Structured_consensus', df[df['Category'] == 'Structured_consensus'])
+    add_stat_row('Structured_acidic_flank', df[df['Category'] == 'Structured_acidic_flank'])
+    struct_all_acidic = df[df['Category'].isin(['Structured_consensus', 'Structured_acidic_flank'])]
+    add_stat_row('Structured_all_acidic', struct_all_acidic)
+    add_stat_row('Structured_neither', df[df['Category'] == 'Structured_neither'])
+
     # Spacer
     data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
 
-    # 2. Consensus Rates
-    data_list.append({'Metric': '=== CONSENSUS RATES ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+    # 2. Rates (consensus and all_acidic)
+    data_list.append({'Metric': '=== RATES ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
     total_flex = len(df[df['Flexible'] == 'Yes'])
     total_struct = len(df[df['Structured'] == 'Yes'])
 
     flex_cons = len(df[df['Category'] == 'Flexible_consensus'])
     struct_cons = len(df[df['Category'] == 'Structured_consensus'])
+    flex_all_acidic_count = len(flex_all_acidic)
+    struct_all_acidic_count = len(struct_all_acidic)
 
-    f_rate = flex_cons / total_flex if total_flex > 0 else 0
-    s_rate = struct_cons / total_struct if total_struct > 0 else 0
+    f_cons_rate = flex_cons / total_flex if total_flex > 0 else 0
+    s_cons_rate = struct_cons / total_struct if total_struct > 0 else 0
+    f_acidic_rate = flex_all_acidic_count / total_flex if total_flex > 0 else 0
+    s_acidic_rate = struct_all_acidic_count / total_struct if total_struct > 0 else 0
 
     data_list.append({
         'Metric': 'Flexible consensus rate',
-        'Value': f"{f_rate:.3f} ({flex_cons}/{total_flex})",
+        'Value': f"{f_cons_rate:.3f} ({flex_cons}/{total_flex})",
         'Mean_Score': None, 'Std_Score': None
     })
 
     data_list.append({
         'Metric': 'Structured consensus rate',
-        'Value': f"{s_rate:.3f} ({struct_cons}/{total_struct})",
+        'Value': f"{s_cons_rate:.3f} ({struct_cons}/{total_struct})",
+        'Mean_Score': None, 'Std_Score': None
+    })
+
+    data_list.append({
+        'Metric': 'Flexible all_acidic rate',
+        'Value': f"{f_acidic_rate:.3f} ({flex_all_acidic_count}/{total_flex})",
+        'Mean_Score': None, 'Std_Score': None
+    })
+
+    data_list.append({
+        'Metric': 'Structured all_acidic rate',
+        'Value': f"{s_acidic_rate:.3f} ({struct_all_acidic_count}/{total_struct})",
         'Mean_Score': None, 'Std_Score': None
     })
 
