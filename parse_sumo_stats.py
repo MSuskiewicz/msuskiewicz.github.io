@@ -329,9 +329,21 @@ def analyze_site(struct: dict, pos: int) -> dict:
 # STATISTICS & MAIN
 # =============================================================================
 
-def perform_analysis(df: pd.DataFrame, score_category: str) -> pd.DataFrame:
+def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict = None) -> pd.DataFrame:
     score_col = 'Score (SUMO site)'
     data_list = []
+
+    # 0. Data completeness summary (if provided)
+    if summary_stats:
+        data_list.append({'Metric': '=== DATA COMPLETENESS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+        total = summary_stats['total']
+        success = summary_stats['success']
+        failed = summary_stats['failed']
+        rate = (success / total * 100) if total > 0 else 0
+        data_list.append({'Metric': 'Total sites', 'Value': total, 'Mean_Score': None, 'Std_Score': None})
+        data_list.append({'Metric': 'Successfully resolved', 'Value': f"{success} ({rate:.1f}%)", 'Mean_Score': None, 'Std_Score': None})
+        data_list.append({'Metric': 'Failed to resolve', 'Value': failed, 'Mean_Score': None, 'Std_Score': None})
+        data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
 
     cats = [
         'Flexible_consensus',
@@ -343,6 +355,7 @@ def perform_analysis(df: pd.DataFrame, score_category: str) -> pd.DataFrame:
     ]
 
     # 1. Category Statistics (Count, Mean Score, Std Score)
+    data_list.append({'Metric': '=== CATEGORY COUNTS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
     for cat in cats:
         subset = df[df['Category'] == cat]
         count = len(subset)
@@ -364,6 +377,7 @@ def perform_analysis(df: pd.DataFrame, score_category: str) -> pd.DataFrame:
     data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
 
     # 2. Consensus Rates
+    data_list.append({'Metric': '=== CONSENSUS RATES ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
     total_flex = len(df[df['Flexible'] == 'Yes'])
     total_struct = len(df[df['Structured'] == 'Yes'])
 
@@ -386,6 +400,8 @@ def perform_analysis(df: pd.DataFrame, score_category: str) -> pd.DataFrame:
     })
 
     # 3. Chi-Square Test (2x3: Flexible vs Structured across the 3 sub-types)
+    data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+    data_list.append({'Metric': '=== STATISTICAL TESTS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
     f_counts = [len(df[df['Category'] == c]) for c in cats[:3]]
     s_counts = [len(df[df['Category'] == c]) for c in cats[3:]]
 
@@ -433,6 +449,23 @@ def process_file(input_file: str, output_file: str = None):
     res_df = res_df.rename(columns=cols_map)
     df = pd.concat([df, res_df], axis=1)
 
+    # Calculate success/failure summary
+    total_sites = len(df)
+    success_count = df['pLDDT_site'].notna().sum()
+    failed_count = total_sites - success_count
+    success_rate = (success_count / total_sites * 100) if total_sites > 0 else 0
+
+    # Print summary to console
+    print(f"\n{'='*40}")
+    print(f"DATA COMPLETENESS SUMMARY")
+    print(f"{'='*40}")
+    print(f"Total sites:          {total_sites}")
+    print(f"Successfully resolved: {success_count} ({success_rate:.1f}%)")
+    print(f"Failed to resolve:     {failed_count}")
+    print(f"{'='*40}\n")
+
+    summary_stats = {'total': total_sites, 'success': success_count, 'failed': failed_count}
+
     # Score stratification & Type Conversion
     score_col = 'Score (SUMO site)'
     if score_col in df.columns:
@@ -450,7 +483,13 @@ def process_file(input_file: str, output_file: str = None):
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='Sites', index=False)
         for name, sub in cats.items():
-            if len(sub) > 0: perform_analysis(sub, name).to_excel(writer, sheet_name=f'Analysis_{name}', index=False)
+            if len(sub) > 0:
+                # Calculate per-category summary
+                cat_total = len(sub)
+                cat_success = sub['pLDDT_site'].notna().sum()
+                cat_failed = cat_total - cat_success
+                cat_summary = {'total': cat_total, 'success': cat_success, 'failed': cat_failed}
+                perform_analysis(sub, name, cat_summary).to_excel(writer, sheet_name=f'Analysis_{name}', index=False)
     print(f"Analysis complete. Output: {output_file}")
 
 def main():
