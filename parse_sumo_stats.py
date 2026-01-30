@@ -420,6 +420,10 @@ def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict 
 def process_file(input_file: str, output_file: str = None):
     print(f"\n{'='*60}\nSUMO Site Analyzer (Stats Extended)\n{'='*60}\n")
     df = pd.read_excel(input_file, sheet_name=0, header=1)
+
+    # Only keep columns A to AA (first 27 columns) from original input
+    df = df.iloc[:, :27]
+
     protein_col = next((c for c in df.columns if str(c).lower() == 'protein'), 'Protein')
     position_col = next((c for c in df.columns if str(c).lower() == 'position'), 'Position')
 
