@@ -452,17 +452,21 @@ def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict 
     })
 
     # 3. Chi-Square Test (2x3: Flexible vs Structured across the 3 sub-types)
+    # Tests if distribution across (consensus, acidic_flank, neither) differs between Flexible and Structured
     data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
     data_list.append({'Metric': '=== STATISTICAL TESTS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+    data_list.append({'Metric': 'Chi-square test: Flexible vs Structured', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+    data_list.append({'Metric': '(comparing distribution across consensus/acidic_flank/neither)', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
+
     f_counts = [len(df[df['Category'] == c]) for c in cats[:3]]
     s_counts = [len(df[df['Category'] == c]) for c in cats[3:]]
 
     if sum(f_counts) > 0 and sum(s_counts) > 0:
         try:
             chi2, pval, _, _ = stats.chi2_contingency([f_counts, s_counts])
-            data_list.append({'Metric': 'Chi-square (2x3)', 'Value': f"{chi2:.2f}", 'Mean_Score': None, 'Std_Score': None})
+            data_list.append({'Metric': 'Chi-square statistic', 'Value': f"{chi2:.2f}", 'Mean_Score': None, 'Std_Score': None})
             data_list.append({'Metric': 'p-value', 'Value': f"{pval:.2e}", 'Mean_Score': None, 'Std_Score': None})
-            data_list.append({'Metric': 'Conclusion', 'Value': 'Significant' if pval < 0.05 else 'Not Significant', 'Mean_Score': None, 'Std_Score': None})
+            data_list.append({'Metric': 'Conclusion', 'Value': 'Significant difference' if pval < 0.05 else 'No significant difference', 'Mean_Score': None, 'Std_Score': None})
         except Exception as e:
             data_list.append({'Metric': 'Chi-square error', 'Value': str(e), 'Mean_Score': None, 'Std_Score': None})
 
