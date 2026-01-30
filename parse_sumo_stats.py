@@ -253,18 +253,32 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
         result = (struct, uid, final_pos)
         cache[cache_key] = result; return result
 
+    # No direct AlphaFold model - try to find via mapping
+    logger.debug(f"{uid}: No direct AlphaFold model, trying mapping...")
+
     # Try to get sequence with minimum length requirement matching the position
     original_seq = get_unisave_sequence(uid, cache, min_length=pos) or get_uniprot_sequence(uid, isoform, cache)
     if not original_seq or pos > len(original_seq):
-        logger.warning(f"Position {pos} > sequence length {len(original_seq) if original_seq else 0} for {uid}")
+        logger.warning(f"{uid}: No sequence found or position {pos} > length {len(original_seq) if original_seq else 0}")
         return (None, uid, pos)
+
+    logger.debug(f"{uid}: Found sequence of length {len(original_seq)}")
 
     target_acc = get_mapped_accession(uid, cache)
     if target_acc:
+        logger.debug(f"{uid}: Mapped to {target_acc}")
         struct = fetch_alphafold(target_acc, 1)
         if struct:
             mapped_pos = map_position_by_residue(original_seq, struct['sequence_string'], pos)
-            if mapped_pos: return (struct, target_acc, mapped_pos)
+            if mapped_pos:
+                logger.debug(f"{uid}: Position {pos} mapped to {mapped_pos} in {target_acc}")
+                return (struct, target_acc, mapped_pos)
+            else:
+                logger.warning(f"{uid}: Failed to map position {pos} to {target_acc}")
+        else:
+            logger.warning(f"{uid}: Mapped acc {target_acc} has no AlphaFold model")
+    else:
+        logger.warning(f"{uid}: No mapped accession found")
 
     return (None, uid, pos)
 
