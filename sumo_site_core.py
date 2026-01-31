@@ -25,7 +25,10 @@ from threading import Lock
 
 PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
 PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
-DISTANCE_THRESHOLD = 7.0        # Angstroms for acidic proximity
+
+# Distance thresholds (separate for flexible and structured sites)
+DISTANCE_THRESHOLD_FLEXIBLE = 8.0    # Angstroms for Cα-Cα distance in flexible sites
+DISTANCE_THRESHOLD_STRUCTURED = 8.0  # Angstroms for NZ-CG/CD distance in structured sites
 
 # Score thresholds for stratification
 SCORE_VERY_HIGH_THRESHOLD = 600
@@ -250,11 +253,14 @@ def parse_cif(content: str) -> dict:
 
     Extracts:
     - CA coordinates for all residues
-    - NZ coordinates for lysines (for distance calculations)
-    - CG coordinates for Asp, CD coordinates for Glu (acidic residues)
+    - NZ coordinates for lysines (for structured site distance calculations)
+    - CG coordinates for Asp, CD coordinates for Glu (for structured site distances)
+    - Acidic CA coordinates (for flexible site Cα-Cα distances)
     - pLDDT values from B-factor column
     """
-    plddt, seq, coords_ca, coords_nz, acidic_coords = {}, {}, {}, {}, {}
+    plddt, seq, coords_ca, coords_nz = {}, {}, {}, {}
+    acidic_coords_sidechain = {}  # CG for Asp, CD for Glu (for structured)
+    acidic_coords_ca = {}  # CA for acidic residues (for flexible)
     in_atom, headers, idx = False, [], {}
 
     for line in content.split('\n'):
@@ -277,19 +283,22 @@ def parse_cif(content: str) -> dict:
                     plddt[rn] = float(p[idx['B_iso_or_equiv']])
                     seq[rn] = aa
                     coords_ca[rn] = coord
+                    # Also store CA for acidic residues (for flexible site calculations)
+                    if aa3 in ('ASP', 'GLU'):
+                        acidic_coords_ca[rn] = coord
                 elif atom_name == 'NZ' and aa3 == 'LYS':
                     coords_nz[rn] = coord
                 elif atom_name == 'CG' and aa3 == 'ASP':
-                    acidic_coords[rn] = coord
+                    acidic_coords_sidechain[rn] = coord
                 elif atom_name == 'CD' and aa3 == 'GLU':
-                    acidic_coords[rn] = coord
+                    acidic_coords_sidechain[rn] = coord
             except Exception:
                 continue
         elif in_atom and line.startswith('#'):
             break
 
     seq_str = ''.join(seq.get(i, 'X') for i in range(1, max(seq.keys(), default=0) + 1))
-    acidic_positions = sorted(acidic_coords.keys())
+    acidic_positions = sorted(set(acidic_coords_sidechain.keys()) | set(acidic_coords_ca.keys()))
 
     return {
         'plddt': plddt,
@@ -297,7 +306,8 @@ def parse_cif(content: str) -> dict:
         'sequence_string': seq_str,
         'coords_ca': coords_ca,
         'coords_nz': coords_nz,
-        'acidic_coords': acidic_coords,
+        'acidic_coords_sidechain': acidic_coords_sidechain,  # CG/CD for structured
+        'acidic_coords_ca': acidic_coords_ca,  # CA for flexible
         'acidic_positions': acidic_positions
     }
 
@@ -354,6 +364,10 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
 def analyze_site(struct: dict, pos: int) -> dict:
     """Analyze a SUMO site and compute all metrics.
 
+    Distance calculation depends on flexibility:
+    - Flexible sites: Cα-Cα distances, threshold = DISTANCE_THRESHOLD_FLEXIBLE
+    - Structured sites: NZ(Lys)-CG/CD(acidic) distances, threshold = DISTANCE_THRESHOLD_STRUCTURED
+
     Returns dict with all output columns.
     """
     res = {
@@ -384,8 +398,10 @@ def analyze_site(struct: dict, pos: int) -> dict:
 
     plddt = struct['plddt']
     seq = struct['sequence']
+    coords_ca = struct['coords_ca']
     coords_nz = struct['coords_nz']
-    acidic_coords = struct['acidic_coords']
+    acidic_coords_sidechain = struct['acidic_coords_sidechain']
+    acidic_coords_ca = struct['acidic_coords_ca']
     acidic_positions = struct['acidic_positions']
 
     # pLDDT values
@@ -403,10 +419,30 @@ def analyze_site(struct: dict, pos: int) -> dict:
     res['aa_p1'] = seq.get(pos + 1)
     res['aa_p2'] = seq.get(pos + 2)
 
-    # Calculate distances using NZ of Lys to CG/CD of acidic residues
-    if pos in coords_nz and acidic_positions:
-        lys_nz_coord = coords_nz[pos]
+    # Determine flexibility FIRST (needed for distance calculation method)
+    is_flexible = False
+    if res['plddt_window_avg'] is not None:
+        if res['plddt_window_avg'] < PLDDT_THRESHOLD:
+            res['flexible'] = 'Yes'
+            is_flexible = True
+        else:
+            res['structured'] = 'Yes'
 
+    # Calculate distances based on flexibility
+    # Flexible: Cα(Lys) to Cα(acidic)
+    # Structured: NZ(Lys) to CG(Asp)/CD(Glu)
+    if is_flexible:
+        # Use Cα-Cα distances for flexible sites
+        lys_coord = coords_ca.get(pos)
+        acidic_coords = acidic_coords_ca
+        distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
+    else:
+        # Use NZ-CG/CD distances for structured sites
+        lys_coord = coords_nz.get(pos)
+        acidic_coords = acidic_coords_sidechain
+        distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
+
+    if lys_coord and acidic_positions:
         min_any, cls_any = float('inf'), None
         min_not_flank, cls_not_flank = float('inf'), None
         n_within = 0
@@ -414,11 +450,11 @@ def analyze_site(struct: dict, pos: int) -> dict:
         for ac_pos in acidic_positions:
             if ac_pos not in acidic_coords:
                 continue
-            d = calc_distance(lys_nz_coord, acidic_coords[ac_pos])
+            d = calc_distance(lys_coord, acidic_coords[ac_pos])
             rel_pos = ac_pos - pos
 
             # Count all acidic within threshold (including neighbors)
-            if d <= DISTANCE_THRESHOLD:
+            if d <= distance_threshold:
                 n_within += 1
 
             # Closest acidic anywhere (any position)
@@ -439,12 +475,13 @@ def analyze_site(struct: dict, pos: int) -> dict:
             res['dist_acidic_not_flank'] = round(min_not_flank, 2)
             res['closest_acidic_not_flank'] = f"{seq.get(cls_not_flank, '?')}{cls_not_flank}"
 
-    # Flexibility classification based on window average pLDDT
-    if res['plddt_window_avg'] is not None:
-        if res['plddt_window_avg'] < PLDDT_THRESHOLD:
-            res['flexible'] = 'Yes'
-        else:
-            res['structured'] = 'Yes'
+        # Acidic in space within threshold (other than -2 or +2 specifically)
+        if res['dist_acidic_not_flank'] is not None and res['dist_acidic_not_flank'] <= distance_threshold:
+            res['acidic_in_space'] = 'Yes'
+
+        # Any acidic within threshold (can be neighboring)
+        if res['n_acidic_within_threshold'] > 0:
+            res['any_acidic_within_threshold'] = 'Yes'
 
     # Consensus motifs
     # Forward: ψKxE (hydrophobic at -1, acidic at +2)
@@ -456,18 +493,9 @@ def analyze_site(struct: dict, pos: int) -> dict:
     if res['aa_m2'] in ACIDIC_RESIDUES or res['aa_p2'] in ACIDIC_RESIDUES:
         res['acidic_in_flank'] = 'Yes'
 
-    # Acidic in space within threshold (other than -2 or +2 specifically)
-    if res['dist_acidic_not_flank'] is not None and res['dist_acidic_not_flank'] <= DISTANCE_THRESHOLD:
-        res['acidic_in_space'] = 'Yes'
-
-    # Any acidic within threshold (can be neighboring)
-    if res['n_acidic_within_threshold'] > 0:
-        res['any_acidic_within_threshold'] = 'Yes'
-
     # Category assignment (hierarchical: consensus > flankacidic > space > none)
     is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
     is_flank_acidic = (res['acidic_in_flank'] == 'Yes')
-    is_space_acidic = (res['acidic_in_space'] == 'Yes')
     has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
 
     prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
@@ -495,7 +523,8 @@ def process_file(input_file: str, output_file: str = None):
     print(f"Parameters:")
     print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
     print(f"  pLDDT window length: {PLDDT_WINDOW_LENGTH}")
-    print(f"  Distance threshold: {DISTANCE_THRESHOLD} Å")
+    print(f"  Distance threshold (flexible, Cα-Cα): {DISTANCE_THRESHOLD_FLEXIBLE} Å")
+    print(f"  Distance threshold (structured, NZ-CG/CD): {DISTANCE_THRESHOLD_STRUCTURED} Å")
     print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
     print(f"  Sliding window length: {SLIDING_WINDOW_LENGTH}")
     print()
@@ -544,6 +573,7 @@ def process_file(input_file: str, output_file: str = None):
     is_flexible = (res_df['flexible'] == 'Yes').astype(int)
     is_consensus = ((res_df['forward_consensus'] == 'Yes') | (res_df['inverse_consensus'] == 'Yes')).astype(int)
     has_any_acidic = (res_df['any_acidic_within_threshold'] == 'Yes').astype(int)
+    has_flank_acidic = (res_df['acidic_in_flank'] == 'Yes').astype(int)
 
     # Calculate sliding window fractions (centered window)
     half_window = SLIDING_WINDOW_LENGTH // 2
@@ -562,6 +592,7 @@ def process_file(input_file: str, output_file: str = None):
     res_df['sliding_frac_flexible'] = calc_sliding_fraction(is_flexible)
     res_df['sliding_frac_consensus'] = calc_sliding_fraction(is_consensus)
     res_df['sliding_frac_any_acidic'] = calc_sliding_fraction(has_any_acidic)
+    res_df['sliding_frac_flank_acidic'] = calc_sliding_fraction(has_flank_acidic)
 
     # Column mapping to final names
     cols_map = {
@@ -589,7 +620,8 @@ def process_file(input_file: str, output_file: str = None):
         'category': 'Category',
         'sliding_frac_flexible': 'Sliding_frac_Flexible',
         'sliding_frac_consensus': 'Sliding_frac_Consensus',
-        'sliding_frac_any_acidic': 'Sliding_frac_Any_acidic'
+        'sliding_frac_any_acidic': 'Sliding_frac_Any_acidic',
+        'sliding_frac_flank_acidic': 'Sliding_frac_Acidic_in_-2/+2'
     }
     res_df = res_df.rename(columns=cols_map)
 
@@ -619,7 +651,8 @@ def process_file(input_file: str, output_file: str = None):
         'Category',
         'Sliding_frac_Flexible',
         'Sliding_frac_Consensus',
-        'Sliding_frac_Any_acidic'
+        'Sliding_frac_Any_acidic',
+        'Sliding_frac_Acidic_in_-2/+2'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 
@@ -656,7 +689,8 @@ def main():
         print("\nConfigurable parameters (edit at top of script):")
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
         print(f"  PLDDT_WINDOW_LENGTH = {PLDDT_WINDOW_LENGTH}")
-        print(f"  DISTANCE_THRESHOLD = {DISTANCE_THRESHOLD}")
+        print(f"  DISTANCE_THRESHOLD_FLEXIBLE = {DISTANCE_THRESHOLD_FLEXIBLE} (Cα-Cα)")
+        print(f"  DISTANCE_THRESHOLD_STRUCTURED = {DISTANCE_THRESHOLD_STRUCTURED} (NZ-CG/CD)")
         print(f"  SLIDING_WINDOW_LENGTH = {SLIDING_WINDOW_LENGTH}")
         print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
         print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
