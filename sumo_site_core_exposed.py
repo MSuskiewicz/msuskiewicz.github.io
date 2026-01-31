@@ -421,9 +421,9 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
 def analyze_site(struct: dict, pos: int) -> dict:
     """Analyze a SUMO site focusing on exposed acidic residues.
 
-    Distance calculation depends on flexibility:
-    - Flexible sites: Cα-Cα distances, threshold = DISTANCE_THRESHOLD_FLEXIBLE
-    - Structured sites: NZ(Lys)-CG/CD(acidic) distances, threshold = DISTANCE_THRESHOLD_STRUCTURED
+    Distance calculation depends on flexibility of BOTH residues:
+    - If EITHER lysine OR acidic has pLDDT < threshold: use Cα-Cα distance
+    - If BOTH lysine AND acidic have pLDDT >= threshold: use NZ-CG/CD distance
 
     Returns dict with all output columns including exposure data.
     """
@@ -459,6 +459,7 @@ def analyze_site(struct: dict, pos: int) -> dict:
 
     # pLDDT values
     res['plddt_site'] = plddt.get(pos)
+    lys_plddt = plddt.get(pos, 0)
 
     # Window average using configurable window length
     half_window = PLDDT_WINDOW_LENGTH // 2
@@ -475,26 +476,19 @@ def analyze_site(struct: dict, pos: int) -> dict:
     # Is lysine site exposed?
     res['exposed'] = 'Yes' if exposure.get(pos, False) else None
 
-    # Determine flexibility FIRST (needed for distance calculation method)
-    is_flexible = False
+    # Determine flexibility based on window average
     if res['plddt_window_avg'] is not None:
         if res['plddt_window_avg'] < PLDDT_THRESHOLD:
             res['flexible'] = 'Yes'
-            is_flexible = True
         else:
             res['structured'] = 'Yes'
 
-    # Calculate distances to EXPOSED acidic residues based on flexibility
-    if is_flexible:
-        lys_coord = coords_ca.get(pos)
-        acidic_coords = acidic_coords_ca
-        distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
-    else:
-        lys_coord = coords_nz.get(pos)
-        acidic_coords = acidic_coords_sidechain
-        distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
+    # Calculate distances to EXPOSED acidic residues
+    # Method depends on BOTH lysine AND acidic pLDDT
+    lys_ca = coords_ca.get(pos)
+    lys_nz = coords_nz.get(pos)
 
-    if lys_coord and acidic_positions:
+    if acidic_positions and (lys_ca or lys_nz):
         min_exposed_dist = float('inf')
         nearest_exposed_pos = None
         n_exposed_within = 0
@@ -503,10 +497,24 @@ def analyze_site(struct: dict, pos: int) -> dict:
             # Only consider EXPOSED acidic residues
             if not exposure.get(ac_pos, False):
                 continue
-            if ac_pos not in acidic_coords:
-                continue
 
-            d = calc_distance(lys_coord, acidic_coords[ac_pos])
+            ac_plddt = plddt.get(ac_pos, 0)
+
+            # Determine which distance calculation to use for this pair
+            # Use Cα-Cα if EITHER residue is flexible (pLDDT < threshold)
+            # Use NZ-CG/CD only if BOTH are structured (pLDDT >= threshold)
+            if lys_plddt < PLDDT_THRESHOLD or ac_plddt < PLDDT_THRESHOLD:
+                # At least one is flexible - use Cα-Cα
+                if lys_ca is None or ac_pos not in acidic_coords_ca:
+                    continue
+                d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
+                distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
+            else:
+                # Both are structured - use NZ-CG/CD
+                if lys_nz is None or ac_pos not in acidic_coords_sidechain:
+                    continue
+                d = calc_distance(lys_nz, acidic_coords_sidechain[ac_pos])
+                distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
 
             # Count exposed acidics within threshold
             if d <= distance_threshold:
@@ -593,6 +601,7 @@ def process_file(input_file: str, output_file: str = None):
 
     # Calculate sliding window fractions
     is_flexible = (res_df['flexible'] == 'Yes').astype(int)
+    is_structured = (res_df['structured'] == 'Yes').astype(int)
     has_close_exposed = (res_df['close_exposed_acidic'] == 'Yes').astype(int)
 
     half_window = SLIDING_WINDOW_LENGTH // 2
@@ -608,8 +617,35 @@ def process_file(input_file: str, output_file: str = None):
             fractions.append(window.sum() / len(window) if len(window) > 0 else None)
         return fractions
 
+    def calc_conditional_sliding_fraction(condition_series, value_series):
+        """Calculate sliding window fraction of value_series among condition_series==True.
+
+        For each position, looks at the surrounding window and calculates:
+        (count of sites where BOTH condition AND value are true) / (count where condition is true)
+        """
+        n = len(condition_series)
+        fractions = []
+        for i in range(n):
+            start = max(0, i - half_window)
+            end = min(n, i + half_window + 1)
+            cond_window = condition_series.iloc[start:end]
+            val_window = value_series.iloc[start:end]
+            n_cond = cond_window.sum()
+            if n_cond > 0:
+                n_both = (cond_window & val_window).sum()
+                fractions.append(n_both / n_cond)
+            else:
+                fractions.append(None)
+        return fractions
+
     res_df['sliding_frac_flexible'] = calc_sliding_fraction(is_flexible)
     res_df['sliding_frac_exposed_acidic'] = calc_sliding_fraction(has_close_exposed)
+
+    # Conditional sliding fractions: fraction of Flex/Struct sites that have exposed acidic nearby
+    res_df['sliding_frac_flex_with_acidic'] = calc_conditional_sliding_fraction(
+        is_flexible == 1, has_close_exposed == 1)
+    res_df['sliding_frac_struct_with_acidic'] = calc_conditional_sliding_fraction(
+        is_structured == 1, has_close_exposed == 1)
 
     # Column mapping to final names
     cols_map = {
@@ -631,7 +667,9 @@ def process_file(input_file: str, output_file: str = None):
         'structured': 'Structured',
         'category': 'Category',
         'sliding_frac_flexible': 'Sliding_frac_Flexible',
-        'sliding_frac_exposed_acidic': 'Sliding_frac_Exposed_acidic'
+        'sliding_frac_exposed_acidic': 'Sliding_frac_Exposed_acidic',
+        'sliding_frac_flex_with_acidic': 'Sliding_frac_Flex_with_acidic',
+        'sliding_frac_struct_with_acidic': 'Sliding_frac_Struct_with_acidic'
     }
     res_df = res_df.rename(columns=cols_map)
 
@@ -655,7 +693,9 @@ def process_file(input_file: str, output_file: str = None):
         'Structured',
         'Category',
         'Sliding_frac_Flexible',
-        'Sliding_frac_Exposed_acidic'
+        'Sliding_frac_Exposed_acidic',
+        'Sliding_frac_Flex_with_acidic',
+        'Sliding_frac_Struct_with_acidic'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 

@@ -185,9 +185,9 @@ def parse_cif(content: str) -> dict:
 def analyze_lysine(struct: dict, pos: int) -> dict:
     """Analyze a lysine residue (same logic as SUMO site analysis).
 
-    Distance calculation depends on flexibility:
-    - Flexible sites: Cα-Cα distances, threshold = DISTANCE_THRESHOLD_FLEXIBLE
-    - Structured sites: NZ(Lys)-CG/CD(acidic) distances, threshold = DISTANCE_THRESHOLD_STRUCTURED
+    Distance calculation depends on flexibility of BOTH residues:
+    - If EITHER lysine OR acidic has pLDDT < threshold: use Cα-Cα distance
+    - If BOTH lysine AND acidic have pLDDT >= threshold: use NZ-CG/CD distance
     """
     res = {
         'position': pos,
@@ -213,6 +213,7 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
     acidic_positions = struct['acidic_positions']
 
     res['plddt_site'] = plddt.get(pos)
+    lys_plddt = plddt.get(pos, 0)
 
     half_window = PLDDT_WINDOW_LENGTH // 2
     window_vals = [plddt[i] for i in range(pos - half_window, pos + half_window + 1) if i in plddt]
@@ -223,35 +224,38 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
     res['aa_p1'] = seq.get(pos + 1)
     res['aa_p2'] = seq.get(pos + 2)
 
-    # Determine flexibility FIRST (needed for distance calculation method)
-    is_flexible = False
+    # Determine flexibility based on window average (for category classification)
     if res['plddt_window_avg'] is not None:
         if res['plddt_window_avg'] < PLDDT_THRESHOLD:
             res['flexible'] = 'Yes'
-            is_flexible = True
         else:
             res['structured'] = 'Yes'
 
-    # Calculate distances based on flexibility
-    # Flexible: Cα(Lys) to Cα(acidic)
-    # Structured: NZ(Lys) to CG(Asp)/CD(Glu)
-    if is_flexible:
-        lys_coord = coords_ca.get(pos)
-        acidic_coords = acidic_coords_ca
-        distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
-    else:
-        lys_coord = coords_nz.get(pos)
-        acidic_coords = acidic_coords_sidechain
-        distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
+    # Calculate distances - method depends on BOTH lysine AND acidic pLDDT
+    lys_ca = coords_ca.get(pos)
+    lys_nz = coords_nz.get(pos)
 
-    if lys_coord and acidic_positions:
+    if acidic_positions and (lys_ca or lys_nz):
         min_not_flank, n_within = float('inf'), 0
 
         for ac_pos in acidic_positions:
-            if ac_pos not in acidic_coords:
-                continue
-            d = calc_distance(lys_coord, acidic_coords[ac_pos])
+            ac_plddt = plddt.get(ac_pos, 0)
             rel_pos = ac_pos - pos
+
+            # Use Cα-Cα if EITHER residue is flexible (pLDDT < threshold)
+            # Use NZ-CG/CD only if BOTH are structured (pLDDT >= threshold)
+            if lys_plddt < PLDDT_THRESHOLD or ac_plddt < PLDDT_THRESHOLD:
+                # At least one is flexible - use Cα-Cα
+                if lys_ca is None or ac_pos not in acidic_coords_ca:
+                    continue
+                d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
+                distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
+            else:
+                # Both are structured - use NZ-CG/CD
+                if lys_nz is None or ac_pos not in acidic_coords_sidechain:
+                    continue
+                d = calc_distance(lys_nz, acidic_coords_sidechain[ac_pos])
+                distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
 
             if d <= distance_threshold:
                 n_within += 1
@@ -262,7 +266,9 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
 
         res['n_acidic_within_threshold'] = n_within
 
-        if min_not_flank <= distance_threshold:
+        # For acidic_in_space, use appropriate threshold based on lysine flexibility
+        space_threshold = DISTANCE_THRESHOLD_FLEXIBLE if res['flexible'] == 'Yes' else DISTANCE_THRESHOLD_STRUCTURED
+        if min_not_flank <= space_threshold:
             res['acidic_in_space'] = 'Yes'
 
         if n_within > 0:
@@ -669,6 +675,144 @@ def analyze_score_predictors(df: pd.DataFrame) -> list:
     return results
 
 
+def analyze_score_predictors_by_flexibility(df: pd.DataFrame) -> dict:
+    """Analyze which features predict high score, separately for Flexible and Structured sites.
+
+    Returns a dict with two DataFrames: one for Flexible sites, one for Structured sites.
+    """
+    sheets = {}
+
+    score_col = 'Score (SUMO site)'
+    if score_col not in df.columns:
+        return sheets
+
+    for flex_type, flex_filter in [('Flexible', df['Flexible'] == 'Yes'),
+                                    ('Structured', df['Structured'] == 'Yes')]:
+        results = []
+        results.append({'Metric': f'=== PREDICTORS OF HIGH SCORE ({flex_type.upper()} SITES ONLY) ===', 'Value': ''})
+        results.append({'Metric': f'High score defined as >= {SCORE_HIGH_THRESHOLD}', 'Value': ''})
+        results.append({'Metric': '', 'Value': ''})
+
+        subset = df[flex_filter & df['pLDDT_site'].notna() & df[score_col].notna()].copy()
+        subset[score_col] = pd.to_numeric(subset[score_col], errors='coerce')
+        subset = subset[subset[score_col].notna()]
+
+        if len(subset) < 20:
+            results.append({'Metric': 'Error', 'Value': f'Too few {flex_type} samples ({len(subset)})'})
+            sheets[f'Predictors_{flex_type}'] = pd.DataFrame(results)
+            continue
+
+        subset['high_score'] = (subset[score_col] >= SCORE_HIGH_THRESHOLD).astype(int)
+        n_high = subset['high_score'].sum()
+        n_low = len(subset) - n_high
+
+        results.append({'Metric': f'Total {flex_type} sites', 'Value': len(subset)})
+        results.append({'Metric': 'High score sites', 'Value': f'{n_high} ({100*n_high/len(subset):.1f}%)'})
+        results.append({'Metric': 'Low score sites', 'Value': f'{n_low} ({100*n_low/len(subset):.1f}%)'})
+        results.append({'Metric': '', 'Value': ''})
+
+        # Define predictors (excluding Flexible/Structured since we've already filtered)
+        predictors = [
+            ('Forward_consensus', subset['Forward_consensus'] == 'Yes'),
+            ('Inverse_consensus', subset['Inverse_consensus'] == 'Yes'),
+            ('Any_consensus', (subset['Forward_consensus'] == 'Yes') | (subset['Inverse_consensus'] == 'Yes')),
+            ('Acidic_in_-2/+2', subset['Acidic_in_-2/+2'] == 'Yes'),
+            ('Acidic_in_space', subset['Acidic_in_space'] == 'Yes'),
+            ('Any_acidic_within_threshold', subset['Any_acidic_within_threshold'] == 'Yes'),
+        ]
+
+        results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
+        results.append({'Metric': 'Predictor', 'Value': 'Rate_High | Rate_Low | OR | p-value'})
+
+        for name, mask in predictors:
+            pred = mask.astype(int)
+            tp = ((pred == 1) & (subset['high_score'] == 1)).sum()
+            fp = ((pred == 1) & (subset['high_score'] == 0)).sum()
+            fn = ((pred == 0) & (subset['high_score'] == 1)).sum()
+            tn = ((pred == 0) & (subset['high_score'] == 0)).sum()
+
+            rate_high = tp / n_high if n_high > 0 else 0
+            rate_low = fp / n_low if n_low > 0 else 0
+
+            if fp > 0 and fn > 0:
+                odds = (tp * tn) / (fp * fn) if fp * fn > 0 else float('inf')
+                try:
+                    _, p = stats.fisher_exact([[tp, fp], [fn, tn]])
+                    sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                    results.append({
+                        'Metric': name,
+                        'Value': f'{rate_high:.1%} | {rate_low:.1%} | {odds:.2f} | {p:.2e} {sig}'
+                    })
+                except:
+                    results.append({
+                        'Metric': name,
+                        'Value': f'{rate_high:.1%} | {rate_low:.1%} | {odds:.2f} | N/A'
+                    })
+            else:
+                results.append({
+                    'Metric': name,
+                    'Value': f'{rate_high:.1%} | {rate_low:.1%} | N/A | N/A'
+                })
+
+        # N_acidic analysis
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': '--- N_acidic_within_threshold as predictor ---', 'Value': ''})
+
+        n_acidic_col = 'N_acidic_within_threshold'
+        if n_acidic_col in subset.columns:
+            subset['n_acidic'] = pd.to_numeric(subset[n_acidic_col], errors='coerce').fillna(0).astype(int)
+
+            # Correlation with score
+            if len(subset) >= 10:
+                rho, p = stats.spearmanr(subset['n_acidic'], subset[score_col])
+                results.append({'Metric': 'Spearman: N_acidic vs Score', 'Value': f'ρ={rho:.3f}, p={p:.2e}'})
+
+                # Point-biserial with high_score
+                r, p = stats.pointbiserialr(subset['high_score'], subset['n_acidic'])
+                results.append({'Metric': 'Point-biserial: N_acidic vs high_score', 'Value': f'r={r:.3f}, p={p:.2e}'})
+
+                # Mean N_acidic by score group
+                results.append({'Metric': '', 'Value': ''})
+                high_mean = subset[subset['high_score'] == 1]['n_acidic'].mean()
+                low_mean = subset[subset['high_score'] == 0]['n_acidic'].mean()
+
+                if n_high >= 2 and n_low >= 2:
+                    t_stat, t_p = stats.ttest_ind(
+                        subset[subset['high_score'] == 1]['n_acidic'],
+                        subset[subset['high_score'] == 0]['n_acidic']
+                    )
+                    results.append({'Metric': 'Mean N_acidic (high score)', 'Value': f'{high_mean:.2f}'})
+                    results.append({'Metric': 'Mean N_acidic (low score)', 'Value': f'{low_mean:.2f}'})
+                    results.append({'Metric': 't-test', 'Value': f't={t_stat:.2f}, p={t_p:.2e}'})
+
+        # Classifier performance metrics
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': '--- Classifier Performance Metrics ---', 'Value': ''})
+        results.append({'Metric': 'Predictor', 'Value': 'Sens | Spec | PPV | NPV | Accuracy'})
+
+        for name, mask in predictors:
+            pred = mask.astype(int)
+            tp = ((pred == 1) & (subset['high_score'] == 1)).sum()
+            fp = ((pred == 1) & (subset['high_score'] == 0)).sum()
+            fn = ((pred == 0) & (subset['high_score'] == 1)).sum()
+            tn = ((pred == 0) & (subset['high_score'] == 0)).sum()
+
+            sens = tp / (tp + fn) if (tp + fn) > 0 else 0
+            spec = tn / (tn + fp) if (tn + fp) > 0 else 0
+            ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
+            npv = tn / (tn + fn) if (tn + fn) > 0 else 0
+            acc = (tp + tn) / len(subset) if len(subset) > 0 else 0
+
+            results.append({
+                'Metric': name,
+                'Value': f'{sens:.2f} | {spec:.2f} | {ppv:.2f} | {npv:.2f} | {acc:.2f}'
+            })
+
+        sheets[f'Predictors_{flex_type}'] = pd.DataFrame(results)
+
+    return sheets
+
+
 def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -> pd.DataFrame:
     """Perform global analysis on all sites."""
     results = []
@@ -845,6 +989,11 @@ def analyze_file(input_file: str, output_file: str = None):
         # Predictors of high score
         predictors_results = analyze_score_predictors(valid_df)
         pd.DataFrame(predictors_results).to_excel(writer, sheet_name='Score_Predictors', index=False)
+
+        # Predictors of high score by flexibility (Flexible and Structured separately)
+        flex_struct_predictors = analyze_score_predictors_by_flexibility(valid_df)
+        for sheet_name, sheet_df in flex_struct_predictors.items():
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
         # Control comparison sheet (detailed)
         if len(control_df) > 0:
