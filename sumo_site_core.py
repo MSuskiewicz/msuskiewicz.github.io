@@ -497,7 +497,7 @@ def process_file(input_file: str, output_file: str = None):
     print()
 
     df = pd.read_excel(input_file, sheet_name=0, header=1)
-    df = df.iloc[:, :27]
+    df = df.iloc[:, :59]  # Keep columns A to BG
 
     protein_col = next((c for c in df.columns if str(c).lower() == 'protein'), 'Protein')
     position_col = next((c for c in df.columns if str(c).lower() == 'position'), 'Position')
