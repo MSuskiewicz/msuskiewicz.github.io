@@ -32,6 +32,9 @@ SCORE_VERY_HIGH_THRESHOLD = 600
 SCORE_HIGH_THRESHOLD = 400
 SCORE_MEDIUM_THRESHOLD = 200
 
+# Sliding window for fraction calculations
+SLIDING_WINDOW_LENGTH = 100  # Number of sites for sliding window fractions
+
 # Residue classifications
 HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
 ACIDIC_RESIDUES = {'D', 'E'}
@@ -494,6 +497,7 @@ def process_file(input_file: str, output_file: str = None):
     print(f"  pLDDT window length: {PLDDT_WINDOW_LENGTH}")
     print(f"  Distance threshold: {DISTANCE_THRESHOLD} Å")
     print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
+    print(f"  Sliding window length: {SLIDING_WINDOW_LENGTH}")
     print()
 
     df = pd.read_excel(input_file, sheet_name=0, header=1)
@@ -535,6 +539,30 @@ def process_file(input_file: str, output_file: str = None):
     # Build result DataFrame
     res_df = pd.DataFrame(results)
 
+    # Calculate sliding window fractions
+    # Create binary columns for calculations
+    is_flexible = (res_df['flexible'] == 'Yes').astype(int)
+    is_consensus = ((res_df['forward_consensus'] == 'Yes') | (res_df['inverse_consensus'] == 'Yes')).astype(int)
+    has_any_acidic = (res_df['any_acidic_within_threshold'] == 'Yes').astype(int)
+
+    # Calculate sliding window fractions (centered window)
+    half_window = SLIDING_WINDOW_LENGTH // 2
+
+    def calc_sliding_fraction(series):
+        """Calculate sliding window fraction for a binary series."""
+        n = len(series)
+        fractions = []
+        for i in range(n):
+            start = max(0, i - half_window)
+            end = min(n, i + half_window + 1)
+            window = series.iloc[start:end]
+            fractions.append(window.sum() / len(window) if len(window) > 0 else None)
+        return fractions
+
+    res_df['sliding_frac_flexible'] = calc_sliding_fraction(is_flexible)
+    res_df['sliding_frac_consensus'] = calc_sliding_fraction(is_consensus)
+    res_df['sliding_frac_any_acidic'] = calc_sliding_fraction(has_any_acidic)
+
     # Column mapping to final names
     cols_map = {
         'used_id': 'UniProt_ID_used',
@@ -558,7 +586,10 @@ def process_file(input_file: str, output_file: str = None):
         'acidic_in_flank': 'Acidic_in_-2/+2',
         'acidic_in_space': 'Acidic_in_space',
         'any_acidic_within_threshold': 'Any_acidic_within_threshold',
-        'category': 'Category'
+        'category': 'Category',
+        'sliding_frac_flexible': 'Sliding_frac_Flexible',
+        'sliding_frac_consensus': 'Sliding_frac_Consensus',
+        'sliding_frac_any_acidic': 'Sliding_frac_Any_acidic'
     }
     res_df = res_df.rename(columns=cols_map)
 
@@ -585,7 +616,10 @@ def process_file(input_file: str, output_file: str = None):
         'Acidic_in_-2/+2',
         'Acidic_in_space',
         'Any_acidic_within_threshold',
-        'Category'
+        'Category',
+        'Sliding_frac_Flexible',
+        'Sliding_frac_Consensus',
+        'Sliding_frac_Any_acidic'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 
@@ -623,6 +657,7 @@ def main():
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
         print(f"  PLDDT_WINDOW_LENGTH = {PLDDT_WINDOW_LENGTH}")
         print(f"  DISTANCE_THRESHOLD = {DISTANCE_THRESHOLD}")
+        print(f"  SLIDING_WINDOW_LENGTH = {SLIDING_WINDOW_LENGTH}")
         print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
         print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
         print(f"  SCORE_MEDIUM_THRESHOLD = {SCORE_MEDIUM_THRESHOLD}")
