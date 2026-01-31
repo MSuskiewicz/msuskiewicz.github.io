@@ -2,441 +2,602 @@
 """
 SUMO Site Analyzer - Statistical Analysis
 ==========================================
-Performs comprehensive statistical analyses on SUMO site data.
+Analyzes output from sumo_site_core.py with statistical comparisons.
 
-Requires output from sumo_site_core.py or compatible Excel file with columns:
-- pLDDT_site, pLDDT_11residue_avg
-- Flexible, Structured
-- Forward_consensus, Inverse_consensus
-- Acidic_in_space, Acidic_in_-2/+2
-- Category
-- Score (SUMO site) [optional, for score-based analyses]
-
-Analyses included:
-- Category counts and rates by score strata
-- Chi-square tests for category distributions
-- Logistic regression (odds ratios)
-- Distance distribution analysis
-- pLDDT vs Score correlation
-- ROC-style analysis
-- Position-specific analysis
-- Bootstrap confidence intervals
-- Multiple acidic residues analysis
-- Random lysine background comparison
+Analyses:
+1. Global category counts (Flexible/Structured × consensus/flankacidic/space/none)
+2. Score-stratified analysis (VeryHigh, High, Medium, Low)
+3. Control analysis: all lysines in analyzed AlphaFold models
+4. Statistical comparisons: Flexible vs Structured, Sites vs Control
+5. Predictors of high score
 
 Usage:
-    python sumo_site_analysis.py <input_excel_file> [output_file]
+    python sumo_site_analysis.py <core_output_excel> [output_file]
 """
 
 import sys
 import os
-import random
+import re
+import math
+import requests
 import pandas as pd
 import numpy as np
 from scipy import stats
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+import logging
 
 # =============================================================================
-# CONFIGURABLE PARAMETERS
+# CONFIGURABLE PARAMETERS (must match sumo_site_core.py)
 # =============================================================================
 
-PLDDT_THRESHOLD = 65.0
-DISTANCE_THRESHOLD = 9.0
-HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
-ACIDIC_RESIDUES = {'D', 'E'}
+PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
+PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
+DISTANCE_THRESHOLD = 7.0        # Angstroms for acidic proximity
 
 # Score thresholds for stratification
-SCORE_VERY_HIGH_THRESHOLD = 800
+SCORE_VERY_HIGH_THRESHOLD = 600
 SCORE_HIGH_THRESHOLD = 400
 SCORE_MEDIUM_THRESHOLD = 200
 
-# Bootstrap settings
-N_BOOTSTRAP = 1000
+# Residue classifications
+HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
+ACIDIC_RESIDUES = {'D', 'E'}
+
+# Parallel processing settings
+MAX_WORKERS = 10
 
 # =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
 
-def bootstrap_rate_ci(successes: int, total: int, n_bootstrap: int = N_BOOTSTRAP, ci: float = 0.95) -> tuple:
-    """Calculate bootstrap confidence interval for a rate."""
-    if total == 0:
-        return (0.0, 0.0, 0.0)
-    rate = successes / total
-    if total < 5:
-        return (rate, rate, rate)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-    samples = np.random.binomial(total, rate, n_bootstrap) / total
-    alpha = (1 - ci) / 2
-    lower = np.percentile(samples, alpha * 100)
-    upper = np.percentile(samples, (1 - alpha) * 100)
-    return (rate, lower, upper)
+# Global session for connection pooling
+_session = None
+_session_lock = Lock()
 
 
-def rate_str(count: int, total: int) -> str:
-    """Format rate as string with count."""
-    rate = count / total if total > 0 else 0
-    return f"{rate:.3f} ({count}/{total})"
+def get_session() -> requests.Session:
+    global _session
+    if _session is None:
+        with _session_lock:
+            if _session is None:
+                _session = requests.Session()
+                adapter = requests.adapters.HTTPAdapter(
+                    pool_connections=MAX_WORKERS,
+                    pool_maxsize=MAX_WORKERS * 2
+                )
+                _session.mount('https://', adapter)
+                _session.mount('http://', adapter)
+    return _session
 
 
-# =============================================================================
-# STANDARD ANALYSIS
-# =============================================================================
-
-def perform_analysis(df: pd.DataFrame, score_category: str, summary_stats: dict = None) -> pd.DataFrame:
-    """Perform statistical analysis on the sites data."""
-    score_col = 'Score (SUMO site)'
-    data_list = []
-
-    if summary_stats:
-        data_list.append({'Metric': '=== DATA COMPLETENESS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-        total = summary_stats['total']
-        success = summary_stats['success']
-        rate = (success / total * 100) if total > 0 else 0
-        data_list.append({'Metric': 'Total sites', 'Value': total, 'Mean_Score': None, 'Std_Score': None})
-        data_list.append({'Metric': 'Successfully resolved', 'Value': f"{success} ({rate:.1f}%)", 'Mean_Score': None, 'Std_Score': None})
-        data_list.append({'Metric': 'Failed to resolve', 'Value': summary_stats['failed'], 'Mean_Score': None, 'Std_Score': None})
-        data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-
-    cats = [
-        'Flexible_consensus', 'Flexible_flank_acidic', 'Flexible_space_acidic', 'Flexible_neither',
-        'Structured_consensus', 'Structured_flank_acidic', 'Structured_space_acidic', 'Structured_neither'
-    ]
-
-    def add_stat_row(label, subset):
-        count = len(subset)
-        mean_score, std_score = 0.0, 0.0
-        if count > 0 and score_col in df.columns:
-            mean_score = subset[score_col].mean()
-            std_score = subset[score_col].std()
-        data_list.append({
-            'Metric': label,
-            'Value': count,
-            'Mean_Score': round(mean_score, 2) if not pd.isna(mean_score) else None,
-            'Std_Score': round(std_score, 2) if not pd.isna(std_score) else None
-        })
-
-    data_list.append({'Metric': '=== CATEGORY COUNTS ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-
-    for cat in cats[:4]:
-        add_stat_row(cat, df[df['Category'] == cat])
-    data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-    for cat in cats[4:]:
-        add_stat_row(cat, df[df['Category'] == cat])
-
-    data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-    data_list.append({'Metric': '=== RATES ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-
-    total_flex = len(df[df['Flexible'] == 'Yes'])
-    total_struct = len(df[df['Structured'] == 'Yes'])
-
-    flex_cons = len(df[df['Category'] == 'Flexible_consensus'])
-    flex_flank = len(df[df['Category'] == 'Flexible_flank_acidic'])
-    flex_space = len(df[df['Category'] == 'Flexible_space_acidic'])
-    flex_neither = len(df[df['Category'] == 'Flexible_neither'])
-
-    struct_cons = len(df[df['Category'] == 'Structured_consensus'])
-    struct_flank = len(df[df['Category'] == 'Structured_flank_acidic'])
-    struct_space = len(df[df['Category'] == 'Structured_space_acidic'])
-    struct_neither = len(df[df['Category'] == 'Structured_neither'])
-
-    data_list.append({'Metric': 'Flexible consensus rate', 'Value': rate_str(flex_cons, total_flex), 'Mean_Score': None, 'Std_Score': None})
-    data_list.append({'Metric': 'Structured consensus rate', 'Value': rate_str(struct_cons, total_struct), 'Mean_Score': None, 'Std_Score': None})
-
-    flex_cons_flank = flex_cons + flex_flank
-    struct_cons_flank = struct_cons + struct_flank
-    data_list.append({'Metric': 'Flexible cons+flank rate', 'Value': rate_str(flex_cons_flank, total_flex), 'Mean_Score': None, 'Std_Score': None})
-    data_list.append({'Metric': 'Structured cons+flank rate', 'Value': rate_str(struct_cons_flank, total_struct), 'Mean_Score': None, 'Std_Score': None})
-
-    flex_all_acidic = flex_cons + flex_flank + flex_space
-    struct_all_acidic = struct_cons + struct_flank + struct_space
-    data_list.append({'Metric': 'Flexible all_acidic rate', 'Value': rate_str(flex_all_acidic, total_flex), 'Mean_Score': None, 'Std_Score': None})
-    data_list.append({'Metric': 'Structured all_acidic rate', 'Value': rate_str(struct_all_acidic, total_struct), 'Mean_Score': None, 'Std_Score': None})
-
-    data_list.append({'Metric': 'Flexible none rate', 'Value': rate_str(flex_neither, total_flex), 'Mean_Score': None, 'Std_Score': None})
-    data_list.append({'Metric': 'Structured none rate', 'Value': rate_str(struct_neither, total_struct), 'Mean_Score': None, 'Std_Score': None})
-
-    data_list.append({'Metric': '', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-    data_list.append({'Metric': '=== CHI-SQUARE TEST ===', 'Value': '', 'Mean_Score': '', 'Std_Score': ''})
-
-    f_counts = [flex_cons, flex_flank, flex_space, flex_neither]
-    s_counts = [struct_cons, struct_flank, struct_space, struct_neither]
-
-    if sum(f_counts) > 0 and sum(s_counts) > 0:
-        try:
-            chi2, pval, _, _ = stats.chi2_contingency([f_counts, s_counts])
-            data_list.append({'Metric': 'Chi-square', 'Value': f"{chi2:.2f}, p={pval:.2e}", 'Mean_Score': None, 'Std_Score': None})
-        except Exception as e:
-            data_list.append({'Metric': 'Chi-square error', 'Value': str(e), 'Mean_Score': None, 'Std_Score': None})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value', 'Mean_Score', 'Std_Score'])
+AA_3TO1 = {
+    'ALA': 'A', 'ARG': 'R', 'ASN': 'N', 'ASP': 'D', 'CYS': 'C',
+    'GLN': 'Q', 'GLU': 'E', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I',
+    'LEU': 'L', 'LYS': 'K', 'MET': 'M', 'PHE': 'F', 'PRO': 'P',
+    'SER': 'S', 'THR': 'T', 'TRP': 'W', 'TYR': 'Y', 'VAL': 'V',
+    'SEC': 'U', 'PYL': 'O'
+}
 
 
-def perform_trend_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Global trend analysis across score bins."""
-    score_col = 'Score (SUMO site)'
-    data_list = []
+def safe_get(url: str, timeout: int = 30) -> requests.Response | None:
+    try:
+        r = get_session().get(url, timeout=timeout)
+        return r if r.status_code == 200 else None
+    except Exception:
+        return None
 
-    data_list.append({'Metric': '=== TREND ANALYSIS ===', 'Value': ''})
 
-    if score_col not in df.columns:
-        data_list.append({'Metric': 'Error', 'Value': 'Score column not found'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-    valid_df = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
-
-    if len(valid_df) < 50:
-        data_list.append({'Metric': 'Warning', 'Value': f'Too few samples ({len(valid_df)})'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-    valid_df = valid_df.sort_values(score_col)
-    n_bins = 10
-    valid_df['score_bin'] = pd.qcut(valid_df[score_col], q=n_bins, labels=False, duplicates='drop')
-
-    bin_results = []
-
-    for bin_idx in sorted(valid_df['score_bin'].unique()):
-        bin_df = valid_df[valid_df['score_bin'] == bin_idx]
-        mean_score = bin_df[score_col].mean()
-
-        flex_sites = bin_df[bin_df['Flexible'] == 'Yes']
-        struct_sites = bin_df[bin_df['Structured'] == 'Yes']
-
-        total_flex = len(flex_sites)
-        total_struct = len(struct_sites)
-
-        if total_flex == 0 or total_struct == 0:
-            continue
-
-        flex_cf = len(flex_sites[flex_sites['Category'].isin(['Flexible_consensus', 'Flexible_flank_acidic'])])
-        struct_cf = len(struct_sites[struct_sites['Category'].isin(['Structured_consensus', 'Structured_flank_acidic'])])
-
-        flex_rate_cf = flex_cf / total_flex
-        struct_rate_cf = struct_cf / total_struct
-        diff_cf = flex_rate_cf - struct_rate_cf
-
-        bin_results.append({
-            'bin': bin_idx,
-            'mean_score': mean_score,
-            'n_sites': len(bin_df),
-            'diff_cf': diff_cf
-        })
-
-    if len(bin_results) >= 3:
-        bin_df = pd.DataFrame(bin_results)
-        rho_cf, p_cf = stats.spearmanr(bin_df['mean_score'], bin_df['diff_cf'])
-        data_list.append({'Metric': 'Score vs Flex-Struct diff (cons+flank)', 'Value': f'rho={rho_cf:.3f}, p={p_cf:.2e}'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+def calc_distance(c1: tuple, c2: tuple) -> float:
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(c1, c2)))
 
 
 # =============================================================================
-# ADVANCED STATISTICAL ANALYSES
+# ALPHAFOLD STRUCTURE FETCHING FOR CONTROL ANALYSIS
 # =============================================================================
 
-def perform_logistic_regression(df: pd.DataFrame) -> pd.DataFrame:
-    """Logistic regression: predict high score from features using odds ratios."""
-    data_list = []
-    data_list.append({'Metric': '=== LOGISTIC REGRESSION ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': 'Predicting: Is site high-scoring (>=400)?', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
+def fetch_alphafold(uid: str) -> dict | None:
+    """Fetch AlphaFold structure for a UniProt accession."""
+    r = safe_get(f"https://alphafold.ebi.ac.uk/api/prediction/{uid}")
+    if not r:
+        return None
+    try:
+        data = r.json()
+        if not data:
+            return None
+        cif_url = data[0].get('cifUrl') if data else None
+        if not cif_url:
+            return None
+        cif_r = safe_get(cif_url)
+        return parse_cif(cif_r.text) if cif_r else None
+    except Exception:
+        return None
 
-    score_col = 'Score (SUMO site)'
-    valid = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
 
-    if len(valid) < 50:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples for regression'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+def parse_cif(content: str) -> dict:
+    """Parse mmCIF file to extract coordinates and pLDDT values."""
+    plddt, seq, coords_ca, coords_nz, acidic_coords = {}, {}, {}, {}, {}
+    in_atom, headers, idx = False, [], {}
 
-    valid['high_score'] = (valid[score_col] >= SCORE_HIGH_THRESHOLD).astype(int)
-    valid['is_flexible'] = (valid['Flexible'] == 'Yes').astype(int)
-    valid['is_consensus'] = ((valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes')).astype(int)
-    valid['has_flank'] = (valid['Acidic_in_-2/+2'] == 'Yes').astype(int)
-    valid['has_space'] = (valid['Acidic_in_space'] == 'Yes').astype(int)
-    valid['has_any_acidic'] = ((valid['has_flank'] == 1) | (valid['has_space'] == 1)).astype(int)
-    valid['dist_space'] = pd.to_numeric(valid['Dist_acidic_space_A'], errors='coerce').fillna(50)
-
-    features = ['is_flexible', 'is_consensus', 'has_flank', 'has_space']
-
-    data_list.append({'Metric': '--- Univariate Odds Ratios ---', 'Value': ''})
-
-    for feat in features:
-        a = len(valid[(valid[feat] == 1) & (valid['high_score'] == 1)])
-        b = len(valid[(valid[feat] == 1) & (valid['high_score'] == 0)])
-        c = len(valid[(valid[feat] == 0) & (valid['high_score'] == 1)])
-        d = len(valid[(valid[feat] == 0) & (valid['high_score'] == 0)])
-
-        if b > 0 and c > 0 and d > 0:
-            odds_ratio = (a * d) / (b * c) if b * c > 0 else float('inf')
+    for line in content.split('\n'):
+        line = line.strip()
+        if line.startswith('_atom_site.'):
+            in_atom = True
+            name = line.split('.')[1].split()[0]
+            idx[name] = len(headers)
+            headers.append(name)
+        elif in_atom and line.startswith(('ATOM', 'HETATM')):
+            p = line.split()
             try:
-                _, p = stats.fisher_exact([[a, b], [c, d]])
-                sig = '*' if p < 0.05 else ''
-                data_list.append({'Metric': f'{feat}', 'Value': f'OR={odds_ratio:.2f}, p={p:.2e} {sig}'})
+                atom_name = p[idx['label_atom_id']]
+                rn = int(p[idx['label_seq_id']])
+                aa3 = p[idx['label_comp_id']]
+                aa = AA_3TO1.get(aa3, 'X')
+                coord = (float(p[idx['Cartn_x']]), float(p[idx['Cartn_y']]), float(p[idx['Cartn_z']]))
+
+                if atom_name == 'CA':
+                    plddt[rn] = float(p[idx['B_iso_or_equiv']])
+                    seq[rn] = aa
+                    coords_ca[rn] = coord
+                elif atom_name == 'NZ' and aa3 == 'LYS':
+                    coords_nz[rn] = coord
+                elif atom_name == 'CG' and aa3 == 'ASP':
+                    acidic_coords[rn] = coord
+                elif atom_name == 'CD' and aa3 == 'GLU':
+                    acidic_coords[rn] = coord
+            except Exception:
+                continue
+        elif in_atom and line.startswith('#'):
+            break
+
+    lysine_positions = [pos for pos, aa in seq.items() if aa == 'K']
+    acidic_positions = sorted(acidic_coords.keys())
+
+    return {
+        'plddt': plddt,
+        'sequence': seq,
+        'coords_nz': coords_nz,
+        'acidic_coords': acidic_coords,
+        'acidic_positions': acidic_positions,
+        'lysine_positions': lysine_positions
+    }
+
+
+def analyze_lysine(struct: dict, pos: int) -> dict:
+    """Analyze a lysine residue (same logic as SUMO site analysis)."""
+    res = {
+        'position': pos,
+        'plddt_site': None,
+        'plddt_window_avg': None,
+        'aa_m2': None, 'aa_m1': None, 'aa_p1': None, 'aa_p2': None,
+        'n_acidic_within_threshold': 0,
+        'flexible': None, 'structured': None,
+        'forward_consensus': None, 'inverse_consensus': None,
+        'acidic_in_flank': None, 'acidic_in_space': None,
+        'any_acidic_within_threshold': None, 'category': None
+    }
+
+    if not struct or pos not in struct['plddt']:
+        return res
+
+    plddt = struct['plddt']
+    seq = struct['sequence']
+    coords_nz = struct['coords_nz']
+    acidic_coords = struct['acidic_coords']
+    acidic_positions = struct['acidic_positions']
+
+    res['plddt_site'] = plddt.get(pos)
+
+    half_window = PLDDT_WINDOW_LENGTH // 2
+    window_vals = [plddt[i] for i in range(pos - half_window, pos + half_window + 1) if i in plddt]
+    res['plddt_window_avg'] = sum(window_vals) / len(window_vals) if window_vals else None
+
+    res['aa_m2'] = seq.get(pos - 2)
+    res['aa_m1'] = seq.get(pos - 1)
+    res['aa_p1'] = seq.get(pos + 1)
+    res['aa_p2'] = seq.get(pos + 2)
+
+    if pos in coords_nz and acidic_positions:
+        lys_nz_coord = coords_nz[pos]
+        min_not_flank, n_within = float('inf'), 0
+
+        for ac_pos in acidic_positions:
+            if ac_pos not in acidic_coords:
+                continue
+            d = calc_distance(lys_nz_coord, acidic_coords[ac_pos])
+            rel_pos = ac_pos - pos
+
+            if d <= DISTANCE_THRESHOLD:
+                n_within += 1
+
+            if rel_pos != -2 and rel_pos != 2:
+                if d < min_not_flank:
+                    min_not_flank = d
+
+        res['n_acidic_within_threshold'] = n_within
+
+        if min_not_flank <= DISTANCE_THRESHOLD:
+            res['acidic_in_space'] = 'Yes'
+
+    if res['plddt_window_avg'] is not None:
+        if res['plddt_window_avg'] < PLDDT_THRESHOLD:
+            res['flexible'] = 'Yes'
+        else:
+            res['structured'] = 'Yes'
+
+    res['forward_consensus'] = 'Yes' if res['aa_m1'] in HYDROPHOBIC_RESIDUES and res['aa_p2'] in ACIDIC_RESIDUES else None
+    res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
+
+    if res['aa_m2'] in ACIDIC_RESIDUES or res['aa_p2'] in ACIDIC_RESIDUES:
+        res['acidic_in_flank'] = 'Yes'
+
+    if res['n_acidic_within_threshold'] > 0:
+        res['any_acidic_within_threshold'] = 'Yes'
+
+    is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
+    is_flank_acidic = (res['acidic_in_flank'] == 'Yes')
+    has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
+
+    prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
+
+    if is_consensus:
+        suffix = "_consensus"
+    elif is_flank_acidic:
+        suffix = "_flankacidic"
+    elif has_any_acidic:
+        suffix = "_space"
+    else:
+        suffix = "_none"
+
+    res['category'] = prefix + suffix
+    return res
+
+
+def get_all_lysines_analysis(uniprot_ids: list) -> pd.DataFrame:
+    """Fetch structures and analyze all lysines for control comparison."""
+    unique_ids = list(set(uniprot_ids))
+    logger.info(f"Fetching {len(unique_ids)} unique structures for control analysis...")
+
+    all_lysines = []
+    completed = 0
+
+    def process_uid(uid):
+        struct = fetch_alphafold(uid)
+        if not struct:
+            return []
+        lysines = []
+        for pos in struct['lysine_positions']:
+            analysis = analyze_lysine(struct, pos)
+            analysis['uniprot_id'] = uid
+            lysines.append(analysis)
+        return lysines
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(process_uid, uid): uid for uid in unique_ids}
+        for future in as_completed(futures):
+            lysines = future.result()
+            all_lysines.extend(lysines)
+            completed += 1
+            if completed % 50 == 0 or completed == len(unique_ids):
+                logger.info(f"Control analysis: {completed}/{len(unique_ids)} structures processed")
+
+    return pd.DataFrame(all_lysines)
+
+
+# =============================================================================
+# STATISTICAL ANALYSIS FUNCTIONS
+# =============================================================================
+
+def count_categories(df: pd.DataFrame) -> dict:
+    """Count sites in each category."""
+    categories = [
+        'Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
+        'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none'
+    ]
+    counts = {}
+    for cat in categories:
+        counts[cat] = len(df[df['Category'] == cat])
+
+    counts['Total_Flexible'] = sum(counts[c] for c in categories[:4])
+    counts['Total_Structured'] = sum(counts[c] for c in categories[4:])
+    counts['Total'] = counts['Total_Flexible'] + counts['Total_Structured']
+
+    return counts
+
+
+def calculate_rates(counts: dict) -> dict:
+    """Calculate rates within Flexible and Structured."""
+    rates = {}
+    for prefix in ['Flexible', 'Structured']:
+        total = counts[f'Total_{prefix}']
+        if total > 0:
+            for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+                key = f'{prefix}_{suffix}'
+                rates[f'{key}_rate'] = counts[key] / total
+        else:
+            for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+                key = f'{prefix}_{suffix}'
+                rates[f'{key}_rate'] = None
+    return rates
+
+
+def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
+    """Chi-square test comparing category distribution between Flexible and Structured."""
+    results = []
+    results.append({'Metric': f'=== {label} FLEXIBLE vs STRUCTURED ===', 'Value': ''})
+
+    counts = count_categories(df)
+    rates = calculate_rates(counts)
+
+    # Show counts
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': 'Category', 'Value': 'Flexible | Structured'})
+    for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+        f_count = counts[f'Flexible_{suffix}']
+        s_count = counts[f'Structured_{suffix}']
+        f_rate = rates.get(f'Flexible_{suffix}_rate', 0) or 0
+        s_rate = rates.get(f'Structured_{suffix}_rate', 0) or 0
+        results.append({
+            'Metric': suffix,
+            'Value': f'{f_count} ({f_rate:.1%}) | {s_count} ({s_rate:.1%})'
+        })
+
+    results.append({'Metric': 'TOTAL', 'Value': f"{counts['Total_Flexible']} | {counts['Total_Structured']}"})
+
+    # Chi-square test
+    flex_counts = [counts[f'Flexible_{s}'] for s in ['consensus', 'flankacidic', 'space', 'none']]
+    struct_counts = [counts[f'Structured_{s}'] for s in ['consensus', 'flankacidic', 'space', 'none']]
+
+    if sum(flex_counts) > 0 and sum(struct_counts) > 0:
+        results.append({'Metric': '', 'Value': ''})
+        try:
+            chi2, p, dof, expected = stats.chi2_contingency([flex_counts, struct_counts])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            results.append({'Metric': 'Chi-square test', 'Value': f'χ²={chi2:.2f}, df={dof}, p={p:.2e} {sig}'})
+        except Exception as e:
+            results.append({'Metric': 'Chi-square error', 'Value': str(e)})
+
+        # Fisher exact for each category (Flexible vs Structured)
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': '--- Fisher exact tests (each category) ---', 'Value': ''})
+        for i, suffix in enumerate(['consensus', 'flankacidic', 'space', 'none']):
+            f_yes, f_no = flex_counts[i], sum(flex_counts) - flex_counts[i]
+            s_yes, s_no = struct_counts[i], sum(struct_counts) - struct_counts[i]
+            try:
+                odds, p = stats.fisher_exact([[f_yes, f_no], [s_yes, s_no]])
+                sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                results.append({'Metric': suffix, 'Value': f'OR={odds:.2f}, p={p:.2e} {sig}'})
             except:
-                data_list.append({'Metric': f'{feat}', 'Value': f'OR={odds_ratio:.2f}'})
+                pass
 
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Distance as Continuous Predictor ---', 'Value': ''})
-
-    valid_dist = valid[valid['dist_space'] < 50]
-    if len(valid_dist) > 20:
-        rho, p = stats.pointbiserialr(valid_dist['high_score'], valid_dist['dist_space'])
-        data_list.append({'Metric': 'Distance vs high_score correlation', 'Value': f'r={rho:.3f}, p={p:.2e}'})
-
-        high_dist = valid_dist[valid_dist['high_score'] == 1]['dist_space'].mean()
-        low_dist = valid_dist[valid_dist['high_score'] == 0]['dist_space'].mean()
-        t_stat, t_p = stats.ttest_ind(
-            valid_dist[valid_dist['high_score'] == 1]['dist_space'],
-            valid_dist[valid_dist['high_score'] == 0]['dist_space']
-        )
-        data_list.append({'Metric': 'Mean dist (high score)', 'Value': f'{high_dist:.2f} Å'})
-        data_list.append({'Metric': 'Mean dist (low score)', 'Value': f'{low_dist:.2f} Å'})
-        data_list.append({'Metric': 't-test p-value', 'Value': f'{t_p:.2e}'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    return results
 
 
-def perform_distance_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Analyze distance distributions for Flexible vs Structured sites."""
-    data_list = []
-    data_list.append({'Metric': '=== DISTANCE DISTRIBUTION ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': 'Comparing NZ-acidic distances: Flexible vs Structured', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
+def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -> list:
+    """Compare SUMO sites vs all lysines (control)."""
+    results = []
+    results.append({'Metric': '=== SUMO SITES vs ALL LYSINES (CONTROL) ===', 'Value': ''})
 
-    valid = df[df['pLDDT_site'].notna()].copy()
-    valid['dist'] = pd.to_numeric(valid['Dist_acidic_space_A'], errors='coerce')
+    sites_counts = count_categories(sites_df)
+    control_counts = count_categories(control_df)
 
-    flex = valid[(valid['Flexible'] == 'Yes') & valid['dist'].notna()]['dist']
-    struct = valid[(valid['Structured'] == 'Yes') & valid['dist'].notna()]['dist']
+    sites_rates = calculate_rates(sites_counts)
+    control_rates = calculate_rates(control_counts)
 
-    if len(flex) < 10 or len(struct) < 10:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples with distance data'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': 'N sites', 'Value': sites_counts['Total']})
+    results.append({'Metric': 'N control lysines', 'Value': control_counts['Total']})
 
-    data_list.append({'Metric': '--- Flexible sites ---', 'Value': ''})
-    data_list.append({'Metric': 'N', 'Value': len(flex)})
-    data_list.append({'Metric': 'Mean distance', 'Value': f'{flex.mean():.2f} Å'})
-    data_list.append({'Metric': 'Median distance', 'Value': f'{flex.median():.2f} Å'})
-    data_list.append({'Metric': 'Std dev', 'Value': f'{flex.std():.2f} Å'})
-    data_list.append({'Metric': 'Min/Max', 'Value': f'{flex.min():.2f} / {flex.max():.2f} Å'})
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': '--- Overall category comparison ---', 'Value': ''})
+    results.append({'Metric': 'Category', 'Value': 'Sites | Control'})
 
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Structured sites ---', 'Value': ''})
-    data_list.append({'Metric': 'N', 'Value': len(struct)})
-    data_list.append({'Metric': 'Mean distance', 'Value': f'{struct.mean():.2f} Å'})
-    data_list.append({'Metric': 'Median distance', 'Value': f'{struct.median():.2f} Å'})
-    data_list.append({'Metric': 'Std dev', 'Value': f'{struct.std():.2f} Å'})
-    data_list.append({'Metric': 'Min/Max', 'Value': f'{struct.min():.2f} / {struct.max():.2f} Å'})
+    for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
+                'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+        s_count = sites_counts[cat]
+        c_count = control_counts[cat]
+        s_pct = 100 * s_count / sites_counts['Total'] if sites_counts['Total'] > 0 else 0
+        c_pct = 100 * c_count / control_counts['Total'] if control_counts['Total'] > 0 else 0
+        results.append({'Metric': cat, 'Value': f'{s_count} ({s_pct:.1f}%) | {c_count} ({c_pct:.1f}%)'})
 
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Statistical comparison ---', 'Value': ''})
+    # Chi-square comparing overall distributions
+    results.append({'Metric': '', 'Value': ''})
+    sites_all = [sites_counts[c] for c in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
+                                            'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']]
+    control_all = [control_counts[c] for c in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
+                                                'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']]
 
-    u_stat, u_p = stats.mannwhitneyu(flex, struct, alternative='two-sided')
-    data_list.append({'Metric': 'Mann-Whitney U test', 'Value': f'U={u_stat:.0f}, p={u_p:.2e}'})
+    if sum(sites_all) > 0 and sum(control_all) > 0:
+        try:
+            chi2, p, dof, expected = stats.chi2_contingency([sites_all, control_all])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            results.append({'Metric': 'Chi-square (all categories)', 'Value': f'χ²={chi2:.2f}, df={dof}, p={p:.2e} {sig}'})
+        except Exception as e:
+            results.append({'Metric': 'Chi-square error', 'Value': str(e)})
 
-    t_stat, t_p = stats.ttest_ind(flex, struct)
-    data_list.append({'Metric': 't-test', 'Value': f't={t_stat:.2f}, p={t_p:.2e}'})
+    # Compare specific features
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': '--- Feature enrichment in SUMO sites vs control ---', 'Value': ''})
 
-    ks_stat, ks_p = stats.ks_2samp(flex, struct)
-    data_list.append({'Metric': 'KS test (distribution shape)', 'Value': f'D={ks_stat:.3f}, p={ks_p:.2e}'})
-
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Distance percentiles ---', 'Value': ''})
-    for pct in [25, 50, 75, 90]:
-        f_pct = np.percentile(flex, pct)
-        s_pct = np.percentile(struct, pct)
-        data_list.append({'Metric': f'{pct}th percentile', 'Value': f'Flex={f_pct:.1f}Å, Struct={s_pct:.1f}Å'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-
-def perform_plddt_score_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Analyze correlation between pLDDT and score."""
-    data_list = []
-    data_list.append({'Metric': '=== pLDDT vs SCORE ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
-
-    score_col = 'Score (SUMO site)'
-    valid = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
-
-    if len(valid) < 20:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-    plddt_site = valid['pLDDT_site']
-    plddt_avg = valid['pLDDT_11residue_avg']
-    scores = valid[score_col]
-
-    rho_site, p_site = stats.spearmanr(plddt_site, scores)
-    rho_avg, p_avg = stats.spearmanr(plddt_avg, scores)
-    r_site, rp_site = stats.pearsonr(plddt_site, scores)
-    r_avg, rp_avg = stats.pearsonr(plddt_avg, scores)
-
-    data_list.append({'Metric': '--- pLDDT_site vs Score ---', 'Value': ''})
-    data_list.append({'Metric': 'Spearman rho', 'Value': f'{rho_site:.3f}, p={p_site:.2e}'})
-    data_list.append({'Metric': 'Pearson r', 'Value': f'{r_site:.3f}, p={rp_site:.2e}'})
-
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- pLDDT_11avg vs Score ---', 'Value': ''})
-    data_list.append({'Metric': 'Spearman rho', 'Value': f'{rho_avg:.3f}, p={p_avg:.2e}'})
-    data_list.append({'Metric': 'Pearson r', 'Value': f'{r_avg:.3f}, p={rp_avg:.2e}'})
-
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Mean pLDDT by score category ---', 'Value': ''})
-
-    for label, threshold_low, threshold_high in [
-        ('VeryHigh (>=800)', 800, float('inf')),
-        ('High (400-799)', 400, 800),
-        ('Medium (200-399)', 200, 400),
-        ('Low (<200)', 0, 200)
-    ]:
-        subset = valid[(valid[score_col] >= threshold_low) & (valid[score_col] < threshold_high)]
-        if len(subset) > 0:
-            mean_plddt = subset['pLDDT_site'].mean()
-            data_list.append({'Metric': label, 'Value': f'mean pLDDT={mean_plddt:.1f} (n={len(subset)})'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-
-def perform_roc_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """ROC-like analysis: how well do different features predict high score?"""
-    data_list = []
-    data_list.append({'Metric': '=== ROC-STYLE ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': 'Predicting high score (>=400) from binary features', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
-
-    score_col = 'Score (SUMO site)'
-    valid = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
-
-    if len(valid) < 50:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-    valid['high_score'] = (valid[score_col] >= SCORE_HIGH_THRESHOLD).astype(int)
-    n_positive = valid['high_score'].sum()
-    n_negative = len(valid) - n_positive
-
-    data_list.append({'Metric': 'Total samples', 'Value': len(valid)})
-    data_list.append({'Metric': 'High score (positive)', 'Value': n_positive})
-    data_list.append({'Metric': 'Low score (negative)', 'Value': n_negative})
-    data_list.append({'Metric': '', 'Value': ''})
-
-    predictors = [
-        ('Consensus', (valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes')),
-        ('Flank acidic', valid['Acidic_in_-2/+2'] == 'Yes'),
-        ('Space acidic', valid['Acidic_in_space'] == 'Yes'),
-        ('Any acidic', (valid['Acidic_in_-2/+2'] == 'Yes') | (valid['Acidic_in_space'] == 'Yes')),
-        ('Flexible', valid['Flexible'] == 'Yes'),
-        ('Cons OR Flank', (valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes') | (valid['Acidic_in_-2/+2'] == 'Yes')),
+    features = [
+        ('Flexible', lambda df: df['Flexible'] == 'Yes'),
+        ('Consensus', lambda df: (df['Forward_consensus'] == 'Yes') | (df['Inverse_consensus'] == 'Yes')),
+        ('Acidic_in_-2/+2', lambda df: df['Acidic_in_-2/+2'] == 'Yes'),
+        ('Acidic_in_space', lambda df: df['Acidic_in_space'] == 'Yes'),
+        ('Any_acidic', lambda df: df['Any_acidic_within_threshold'] == 'Yes'),
     ]
 
-    data_list.append({'Metric': 'Predictor', 'Value': 'Sens | Spec | PPV | NPV | Accuracy'})
-    data_list.append({'Metric': '---', 'Value': '---'})
+    for name, condition in features:
+        try:
+            # Handle different column names between sites and control
+            if name == 'Acidic_in_-2/+2':
+                s_col = 'Acidic_in_-2/+2' if 'Acidic_in_-2/+2' in sites_df.columns else 'acidic_in_flank'
+                c_col = 'acidic_in_flank'
+                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
+                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
+            elif name == 'Acidic_in_space':
+                s_col = 'Acidic_in_space' if 'Acidic_in_space' in sites_df.columns else 'acidic_in_space'
+                c_col = 'acidic_in_space'
+                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
+                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
+            elif name == 'Any_acidic':
+                s_col = 'Any_acidic_within_threshold' if 'Any_acidic_within_threshold' in sites_df.columns else 'any_acidic_within_threshold'
+                c_col = 'any_acidic_within_threshold'
+                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
+                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
+            elif name == 'Flexible':
+                s_yes = (sites_df['Flexible'] == 'Yes').sum()
+                c_yes = (control_df['flexible'] == 'Yes').sum()
+            elif name == 'Consensus':
+                s_yes = ((sites_df['Forward_consensus'] == 'Yes') | (sites_df['Inverse_consensus'] == 'Yes')).sum()
+                c_yes = ((control_df['forward_consensus'] == 'Yes') | (control_df['inverse_consensus'] == 'Yes')).sum()
 
-    for name, pred_mask in predictors:
-        pred = pred_mask.astype(int)
+            s_no = len(sites_df) - s_yes
+            c_no = len(control_df) - c_yes
+
+            s_rate = s_yes / len(sites_df) if len(sites_df) > 0 else 0
+            c_rate = c_yes / len(control_df) if len(control_df) > 0 else 0
+
+            odds, p = stats.fisher_exact([[s_yes, s_no], [c_yes, c_no]])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            results.append({
+                'Metric': name,
+                'Value': f'Sites={s_rate:.1%}, Control={c_rate:.1%}, OR={odds:.2f}, p={p:.2e} {sig}'
+            })
+        except Exception as e:
+            results.append({'Metric': name, 'Value': f'Error: {e}'})
+
+    return results
+
+
+def analyze_score_predictors(df: pd.DataFrame) -> list:
+    """Analyze which features predict high score."""
+    results = []
+    results.append({'Metric': '=== PREDICTORS OF HIGH SCORE ===', 'Value': ''})
+    results.append({'Metric': f'High score defined as >= {SCORE_HIGH_THRESHOLD}', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+
+    score_col = 'Score (SUMO site)'
+    if score_col not in df.columns:
+        results.append({'Metric': 'Error', 'Value': 'Score column not found'})
+        return results
+
+    valid = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
+    valid[score_col] = pd.to_numeric(valid[score_col], errors='coerce')
+    valid = valid[valid[score_col].notna()]
+
+    if len(valid) < 50:
+        results.append({'Metric': 'Error', 'Value': f'Too few samples ({len(valid)})'})
+        return results
+
+    valid['high_score'] = (valid[score_col] >= SCORE_HIGH_THRESHOLD).astype(int)
+    n_high = valid['high_score'].sum()
+    n_low = len(valid) - n_high
+
+    results.append({'Metric': 'Total valid sites', 'Value': len(valid)})
+    results.append({'Metric': 'High score sites', 'Value': f'{n_high} ({100*n_high/len(valid):.1f}%)'})
+    results.append({'Metric': 'Low score sites', 'Value': f'{n_low} ({100*n_low/len(valid):.1f}%)'})
+    results.append({'Metric': '', 'Value': ''})
+
+    # Define predictors
+    predictors = [
+        ('Flexible', valid['Flexible'] == 'Yes'),
+        ('Structured', valid['Structured'] == 'Yes'),
+        ('Forward_consensus', valid['Forward_consensus'] == 'Yes'),
+        ('Inverse_consensus', valid['Inverse_consensus'] == 'Yes'),
+        ('Any_consensus', (valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes')),
+        ('Acidic_in_-2/+2', valid['Acidic_in_-2/+2'] == 'Yes'),
+        ('Acidic_in_space', valid['Acidic_in_space'] == 'Yes'),
+        ('Any_acidic_within_threshold', valid['Any_acidic_within_threshold'] == 'Yes'),
+    ]
+
+    results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
+    results.append({'Metric': 'Predictor', 'Value': 'Rate_High | Rate_Low | OR | p-value'})
+
+    for name, mask in predictors:
+        pred = mask.astype(int)
         tp = ((pred == 1) & (valid['high_score'] == 1)).sum()
         fp = ((pred == 1) & (valid['high_score'] == 0)).sum()
-        tn = ((pred == 0) & (valid['high_score'] == 0)).sum()
         fn = ((pred == 0) & (valid['high_score'] == 1)).sum()
+        tn = ((pred == 0) & (valid['high_score'] == 0)).sum()
+
+        rate_high = tp / n_high if n_high > 0 else 0
+        rate_low = fp / n_low if n_low > 0 else 0
+
+        if fp > 0 and fn > 0:
+            odds = (tp * tn) / (fp * fn) if fp * fn > 0 else float('inf')
+            try:
+                _, p = stats.fisher_exact([[tp, fp], [fn, tn]])
+                sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                results.append({
+                    'Metric': name,
+                    'Value': f'{rate_high:.1%} | {rate_low:.1%} | {odds:.2f} | {p:.2e} {sig}'
+                })
+            except:
+                results.append({
+                    'Metric': name,
+                    'Value': f'{rate_high:.1%} | {rate_low:.1%} | {odds:.2f} | N/A'
+                })
+        else:
+            results.append({
+                'Metric': name,
+                'Value': f'{rate_high:.1%} | {rate_low:.1%} | N/A | N/A'
+            })
+
+    # Multiple acidics as predictor
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': '--- N_acidic_within_threshold as predictor ---', 'Value': ''})
+
+    n_acidic_col = 'N_acidic_within_threshold'
+    if n_acidic_col in valid.columns:
+        valid['n_acidic'] = pd.to_numeric(valid[n_acidic_col], errors='coerce').fillna(0).astype(int)
+
+        # Correlation with score
+        rho, p = stats.spearmanr(valid['n_acidic'], valid[score_col])
+        results.append({'Metric': 'Spearman: N_acidic vs Score', 'Value': f'ρ={rho:.3f}, p={p:.2e}'})
+
+        # Point-biserial with high_score
+        r, p = stats.pointbiserialr(valid['high_score'], valid['n_acidic'])
+        results.append({'Metric': 'Point-biserial: N_acidic vs high_score', 'Value': f'r={r:.3f}, p={p:.2e}'})
+
+        # Mean N_acidic by score group
+        results.append({'Metric': '', 'Value': ''})
+        high_mean = valid[valid['high_score'] == 1]['n_acidic'].mean()
+        low_mean = valid[valid['high_score'] == 0]['n_acidic'].mean()
+        t_stat, t_p = stats.ttest_ind(
+            valid[valid['high_score'] == 1]['n_acidic'],
+            valid[valid['high_score'] == 0]['n_acidic']
+        )
+        results.append({'Metric': 'Mean N_acidic (high score)', 'Value': f'{high_mean:.2f}'})
+        results.append({'Metric': 'Mean N_acidic (low score)', 'Value': f'{low_mean:.2f}'})
+        results.append({'Metric': 't-test', 'Value': f't={t_stat:.2f}, p={t_p:.2e}'})
+
+        # Test 2+ acidics
+        results.append({'Metric': '', 'Value': ''})
+        has_2plus = (valid['n_acidic'] >= 2).astype(int)
+        tp = ((has_2plus == 1) & (valid['high_score'] == 1)).sum()
+        fp = ((has_2plus == 1) & (valid['high_score'] == 0)).sum()
+        fn = ((has_2plus == 0) & (valid['high_score'] == 1)).sum()
+        tn = ((has_2plus == 0) & (valid['high_score'] == 0)).sum()
+
+        if fp > 0 and fn > 0:
+            odds = (tp * tn) / (fp * fn)
+            _, p = stats.fisher_exact([[tp, fp], [fn, tn]])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            results.append({'Metric': 'Has 2+ acidics within threshold', 'Value': f'OR={odds:.2f}, p={p:.2e} {sig}'})
+
+    # ROC-style metrics
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': '--- Classifier Performance Metrics ---', 'Value': ''})
+    results.append({'Metric': 'Predictor', 'Value': 'Sens | Spec | PPV | NPV | Accuracy'})
+
+    for name, mask in predictors:
+        pred = mask.astype(int)
+        tp = ((pred == 1) & (valid['high_score'] == 1)).sum()
+        fp = ((pred == 1) & (valid['high_score'] == 0)).sum()
+        fn = ((pred == 0) & (valid['high_score'] == 1)).sum()
+        tn = ((pred == 0) & (valid['high_score'] == 0)).sum()
 
         sens = tp / (tp + fn) if (tp + fn) > 0 else 0
         spec = tn / (tn + fp) if (tn + fp) > 0 else 0
@@ -444,203 +605,123 @@ def perform_roc_analysis(df: pd.DataFrame) -> pd.DataFrame:
         npv = tn / (tn + fn) if (tn + fn) > 0 else 0
         acc = (tp + tn) / len(valid)
 
-        data_list.append({
+        results.append({
             'Metric': name,
             'Value': f'{sens:.2f} | {spec:.2f} | {ppv:.2f} | {npv:.2f} | {acc:.2f}'
         })
 
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- AUC estimates (distance as continuous) ---', 'Value': ''})
-
-    valid['dist'] = pd.to_numeric(valid['Dist_acidic_space_A'], errors='coerce')
-    valid_dist = valid[valid['dist'].notna()]
-
-    if len(valid_dist) > 20:
-        pos_dist = valid_dist[valid_dist['high_score'] == 1]['dist']
-        neg_dist = valid_dist[valid_dist['high_score'] == 0]['dist']
-
-        if len(pos_dist) > 5 and len(neg_dist) > 5:
-            u_stat, _ = stats.mannwhitneyu(pos_dist, neg_dist, alternative='less')
-            auc = u_stat / (len(pos_dist) * len(neg_dist))
-            data_list.append({'Metric': 'AUC (closer distance predicts high score)', 'Value': f'{auc:.3f}'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    return results
 
 
-def perform_position_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Analyze each flanking position separately."""
-    data_list = []
-    data_list.append({'Metric': '=== POSITION-SPECIFIC ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': 'Testing each position for acidic enrichment in high-scoring sites', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
+def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -> pd.DataFrame:
+    """Perform global analysis on all sites."""
+    results = []
 
-    score_col = 'Score (SUMO site)'
-    valid = df[df['pLDDT_site'].notna() & df[score_col].notna()].copy()
+    # Header
+    results.append({'Metric': '=== GLOBAL ANALYSIS ===', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
 
-    if len(valid) < 50:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    # Category counts for sites
+    counts = count_categories(df)
+    rates = calculate_rates(counts)
 
-    valid['high_score'] = (valid[score_col] >= SCORE_HIGH_THRESHOLD).astype(int)
+    results.append({'Metric': '--- SUMO Sites Category Counts ---', 'Value': ''})
+    for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+        rate = rates.get(f'{cat}_rate', 0) or 0
+        results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Flexible)'})
 
-    positions = [
-        ('Position -2', 'AA_minus2'),
-        ('Position -1', 'AA_minus1'),
-        ('Position +1', 'AA_plus1'),
-        ('Position +2', 'AA_plus2'),
-    ]
+    results.append({'Metric': '', 'Value': ''})
+    for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+        rate = rates.get(f'{cat}_rate', 0) or 0
+        results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Structured)'})
 
-    for pos_name, col in positions:
-        data_list.append({'Metric': f'--- {pos_name} ---', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+    results.append({'Metric': 'Total Flexible', 'Value': counts['Total_Flexible']})
+    results.append({'Metric': 'Total Structured', 'Value': counts['Total_Structured']})
+    results.append({'Metric': 'Total', 'Value': counts['Total']})
 
-        valid[f'{col}_acidic'] = valid[col].isin(ACIDIC_RESIDUES).astype(int)
+    # Flex vs Struct comparison
+    results.append({'Metric': '', 'Value': ''})
+    results.extend(compare_flex_vs_struct(df, "SITES:"))
 
-        total_acidic = valid[f'{col}_acidic'].sum()
-        total = len(valid)
+    # Control analysis
+    if control_df is not None and len(control_df) > 0:
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': '', 'Value': ''})
 
-        high_with_acidic = len(valid[(valid[f'{col}_acidic'] == 1) & (valid['high_score'] == 1)])
-        high_total = valid['high_score'].sum()
-        low_with_acidic = len(valid[(valid[f'{col}_acidic'] == 1) & (valid['high_score'] == 0)])
-        low_total = len(valid) - high_total
+        control_counts = count_categories(control_df)
+        control_rates = calculate_rates(control_counts)
 
-        rate_high = high_with_acidic / high_total if high_total > 0 else 0
-        rate_low = low_with_acidic / low_total if low_total > 0 else 0
+        results.append({'Metric': '--- Control (All Lysines) Category Counts ---', 'Value': ''})
+        for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+            rate = control_rates.get(f'{cat}_rate', 0) or 0
+            results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Flexible)'})
 
-        data_list.append({'Metric': 'Acidic at position (all)', 'Value': f'{total_acidic}/{total} ({100*total_acidic/total:.1f}%)'})
-        data_list.append({'Metric': 'Rate in high-score sites', 'Value': f'{rate_high:.3f} ({high_with_acidic}/{high_total})'})
-        data_list.append({'Metric': 'Rate in low-score sites', 'Value': f'{rate_low:.3f} ({low_with_acidic}/{low_total})'})
+        results.append({'Metric': '', 'Value': ''})
+        for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+            rate = control_rates.get(f'{cat}_rate', 0) or 0
+            results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Structured)'})
 
-        table = [[high_with_acidic, high_total - high_with_acidic],
-                 [low_with_acidic, low_total - low_with_acidic]]
-        try:
-            odds, p = stats.fisher_exact(table)
-            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
-            data_list.append({'Metric': 'Fisher exact OR', 'Value': f'{odds:.2f}, p={p:.2e} {sig}'})
-        except:
-            pass
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': 'Total Flexible', 'Value': control_counts['Total_Flexible']})
+        results.append({'Metric': 'Total Structured', 'Value': control_counts['Total_Structured']})
+        results.append({'Metric': 'Total', 'Value': control_counts['Total']})
 
-        data_list.append({'Metric': '', 'Value': ''})
+        # Flex vs Struct for control
+        results.append({'Metric': '', 'Value': ''})
+        results.extend(compare_flex_vs_struct(control_df, "CONTROL:"))
 
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+        # Sites vs Control comparison
+        results.append({'Metric': '', 'Value': ''})
+        results.extend(compare_sites_vs_control(df, control_df))
 
-
-def perform_bootstrap_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate bootstrap confidence intervals for key rates."""
-    data_list = []
-    data_list.append({'Metric': '=== BOOTSTRAP CONFIDENCE INTERVALS ===', 'Value': ''})
-    data_list.append({'Metric': f'Based on {N_BOOTSTRAP} bootstrap samples, 95% CI', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
-
-    valid = df[df['pLDDT_site'].notna()].copy()
-
-    if len(valid) < 20:
-        data_list.append({'Metric': 'Error', 'Value': 'Too few samples'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
-
-    flex = valid[valid['Flexible'] == 'Yes']
-    struct = valid[valid['Structured'] == 'Yes']
-
-    rates_to_calculate = [
-        ('Flexible consensus rate', len(flex[flex['Category'] == 'Flexible_consensus']), len(flex)),
-        ('Flexible cons+flank rate', len(flex[flex['Category'].isin(['Flexible_consensus', 'Flexible_flank_acidic'])]), len(flex)),
-        ('Flexible all_acidic rate', len(flex[flex['Category'].isin(['Flexible_consensus', 'Flexible_flank_acidic', 'Flexible_space_acidic'])]), len(flex)),
-        ('Structured consensus rate', len(struct[struct['Category'] == 'Structured_consensus']), len(struct)),
-        ('Structured cons+flank rate', len(struct[struct['Category'].isin(['Structured_consensus', 'Structured_flank_acidic'])]), len(struct)),
-        ('Structured all_acidic rate', len(struct[struct['Category'].isin(['Structured_consensus', 'Structured_flank_acidic', 'Structured_space_acidic'])]), len(struct)),
-    ]
-
-    for name, successes, total in rates_to_calculate:
-        rate, lower, upper = bootstrap_rate_ci(successes, total)
-        data_list.append({
-            'Metric': name,
-            'Value': f'{rate:.3f} [{lower:.3f} - {upper:.3f}]'
-        })
-
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Rate differences with CIs ---', 'Value': ''})
-
-    if len(flex) > 10 and len(struct) > 10:
-        flex_cf = len(flex[flex['Category'].isin(['Flexible_consensus', 'Flexible_flank_acidic'])]) / len(flex)
-        struct_cf = len(struct[struct['Category'].isin(['Structured_consensus', 'Structured_flank_acidic'])]) / len(struct)
-        obs_diff = flex_cf - struct_cf
-
-        diffs = []
-        for _ in range(N_BOOTSTRAP):
-            flex_sample = flex.sample(n=len(flex), replace=True)
-            struct_sample = struct.sample(n=len(struct), replace=True)
-            f_rate = len(flex_sample[flex_sample['Category'].isin(['Flexible_consensus', 'Flexible_flank_acidic'])]) / len(flex_sample)
-            s_rate = len(struct_sample[struct_sample['Category'].isin(['Structured_consensus', 'Structured_flank_acidic'])]) / len(struct_sample)
-            diffs.append(f_rate - s_rate)
-
-        lower = np.percentile(diffs, 2.5)
-        upper = np.percentile(diffs, 97.5)
-        data_list.append({
-            'Metric': 'Flex-Struct cons+flank diff',
-            'Value': f'{obs_diff:.3f} [{lower:.3f} - {upper:.3f}]'
-        })
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    return pd.DataFrame(results)
 
 
-def perform_multiple_acidic_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    """Analyze effect of multiple acidic residues within threshold."""
-    data_list = []
-    data_list.append({'Metric': '=== MULTIPLE ACIDIC RESIDUES ANALYSIS ===', 'Value': ''})
-    data_list.append({'Metric': f'Counting acidic residues within {DISTANCE_THRESHOLD}Å (excl. -2/+2)', 'Value': ''})
-    data_list.append({'Metric': '', 'Value': ''})
+def perform_stratified_analysis(df: pd.DataFrame, score_col: str = 'Score (SUMO site)') -> dict:
+    """Perform analysis stratified by score groups."""
+    sheets = {}
 
-    score_col = 'Score (SUMO site)'
-    valid = df[df['pLDDT_site'].notna()].copy()
+    if score_col not in df.columns:
+        return sheets
 
-    if 'N_acidic_in_space' not in valid.columns:
-        data_list.append({'Metric': 'Error', 'Value': 'N_acidic column not found'})
-        return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
 
-    valid['n_acidic'] = pd.to_numeric(valid['N_acidic_in_space'], errors='coerce').fillna(0).astype(int)
+    strata = {
+        'VeryHigh': df[df[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+        'High': df[(df[score_col] >= SCORE_HIGH_THRESHOLD) & (df[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
+        'Medium': df[(df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df[score_col] < SCORE_HIGH_THRESHOLD)],
+        'Low': df[df[score_col] < SCORE_MEDIUM_THRESHOLD]
+    }
 
-    data_list.append({'Metric': '--- Distribution of acidic counts ---', 'Value': ''})
-    for n in range(5):
-        count = len(valid[valid['n_acidic'] == n])
-        pct = 100 * count / len(valid) if len(valid) > 0 else 0
-        data_list.append({'Metric': f'{n} acidic residues', 'Value': f'{count} ({pct:.1f}%)'})
+    for name, subset in strata.items():
+        if len(subset) == 0:
+            continue
 
-    count_3plus = len(valid[valid['n_acidic'] >= 3])
-    pct_3plus = 100 * count_3plus / len(valid) if len(valid) > 0 else 0
-    data_list.append({'Metric': '3+ acidic residues', 'Value': f'{count_3plus} ({pct_3plus:.1f}%)'})
+        results = []
+        results.append({'Metric': f'=== {name.upper()} SCORE ANALYSIS ===', 'Value': ''})
+        results.append({'Metric': 'N sites', 'Value': len(subset)})
+        results.append({'Metric': '', 'Value': ''})
 
-    data_list.append({'Metric': '', 'Value': ''})
+        counts = count_categories(subset)
+        rates = calculate_rates(counts)
 
-    if score_col in valid.columns:
-        data_list.append({'Metric': '--- Mean score by acidic count ---', 'Value': ''})
-        valid[score_col] = pd.to_numeric(valid[score_col], errors='coerce')
+        results.append({'Metric': '--- Category Counts ---', 'Value': ''})
+        for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+            rate = rates.get(f'{cat}_rate', 0) or 0
+            results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 
-        for n in range(4):
-            subset = valid[valid['n_acidic'] == n]
-            if len(subset) > 5:
-                mean_score = subset[score_col].mean()
-                data_list.append({'Metric': f'{n} acidic', 'Value': f'mean score={mean_score:.0f} (n={len(subset)})'})
+        results.append({'Metric': '', 'Value': ''})
+        for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+            rate = rates.get(f'{cat}_rate', 0) or 0
+            results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 
-        subset_2plus = valid[valid['n_acidic'] >= 2]
-        if len(subset_2plus) > 5:
-            mean_score = subset_2plus[score_col].mean()
-            data_list.append({'Metric': '2+ acidic', 'Value': f'mean score={mean_score:.0f} (n={len(subset_2plus)})'})
+        results.append({'Metric': '', 'Value': ''})
+        results.extend(compare_flex_vs_struct(subset, name.upper()))
 
-        data_list.append({'Metric': '', 'Value': ''})
+        sheets[f'Score_{name}'] = pd.DataFrame(results)
 
-        rho, p = stats.spearmanr(valid['n_acidic'], valid[score_col])
-        data_list.append({'Metric': 'Spearman: n_acidic vs score', 'Value': f'rho={rho:.3f}, p={p:.2e}'})
-
-    data_list.append({'Metric': '', 'Value': ''})
-    data_list.append({'Metric': '--- Comparing 0 vs 1+ acidic ---', 'Value': ''})
-
-    has_0 = valid[valid['n_acidic'] == 0]
-    has_1plus = valid[valid['n_acidic'] >= 1]
-
-    if len(has_0) > 10 and len(has_1plus) > 10 and score_col in valid.columns:
-        t_stat, p = stats.ttest_ind(has_0[score_col].dropna(), has_1plus[score_col].dropna())
-        data_list.append({'Metric': 't-test (score)', 'Value': f't={t_stat:.2f}, p={p:.2e}'})
-
-    return pd.DataFrame(data_list, columns=['Metric', 'Value'])
+    return sheets
 
 
 # =============================================================================
@@ -648,61 +729,81 @@ def perform_multiple_acidic_analysis(df: pd.DataFrame) -> pd.DataFrame:
 # =============================================================================
 
 def analyze_file(input_file: str, output_file: str = None):
-    """Load data and perform all analyses."""
+    """Load core output and perform all analyses."""
     print(f"\n{'=' * 60}\nSUMO Site Analyzer - Statistical Analysis\n{'=' * 60}\n")
+    print(f"Parameters:")
+    print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
+    print(f"  Distance threshold: {DISTANCE_THRESHOLD} Å")
+    print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
+    print()
 
-    df = pd.read_excel(input_file, sheet_name='Sites' if 'Sites' in pd.ExcelFile(input_file).sheet_names else 0)
+    # Load data
+    xls = pd.ExcelFile(input_file)
+    sheet_name = 'Sites' if 'Sites' in xls.sheet_names else xls.sheet_names[0]
+    df = pd.read_excel(input_file, sheet_name=sheet_name)
 
-    total_sites = len(df)
-    success_count = df['pLDDT_site'].notna().sum()
-    failed_count = total_sites - success_count
-    summary_stats = {'total': total_sites, 'success': success_count, 'failed': failed_count}
+    print(f"Loaded {len(df)} sites from {input_file}")
 
-    print(f"Loaded {total_sites} sites ({success_count} with data)")
+    # Get valid sites (those with pLDDT data)
+    valid_df = df[df['pLDDT_site'].notna()].copy()
+    print(f"Valid sites with structure data: {len(valid_df)}")
 
-    score_col = 'Score (SUMO site)'
-    if score_col in df.columns:
-        df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
-        cats = {
-            'VeryHigh': df[df[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
-            'High': df[(df[score_col] >= SCORE_HIGH_THRESHOLD) & (df[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
-            'Medium': df[(df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df[score_col] < SCORE_HIGH_THRESHOLD)],
-            'Low': df[df[score_col] < SCORE_MEDIUM_THRESHOLD]
-        }
+    # Get unique UniProt IDs for control analysis
+    uid_col = 'UniProt_ID_used'
+    if uid_col in valid_df.columns:
+        uniprot_ids = valid_df[uid_col].dropna().unique().tolist()
+        print(f"Unique proteins: {len(uniprot_ids)}")
+
+        # Fetch control data (all lysines)
+        print("\nFetching control data (all lysines in analyzed structures)...")
+        control_df = get_all_lysines_analysis(uniprot_ids)
+        print(f"Control lysines analyzed: {len(control_df)}")
     else:
-        cats = {'All': df}
+        control_df = pd.DataFrame()
+        print("Warning: UniProt_ID_used column not found, skipping control analysis")
 
+    # Prepare output
     if not output_file:
         output_file = os.path.splitext(input_file)[0] + '_analysis.xlsx'
 
-    print("Generating analysis sheets...")
+    print("\nGenerating analysis sheets...")
 
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-        # Stratified analyses
-        for name, sub in cats.items():
-            if len(sub) > 0:
-                cat_total = len(sub)
-                cat_success = sub['pLDDT_site'].notna().sum()
-                cat_failed = cat_total - cat_success
-                cat_summary = {'total': cat_total, 'success': cat_success, 'failed': cat_failed}
-                perform_analysis(sub, name, cat_summary).to_excel(writer, sheet_name=f'Analysis_{name}', index=False)
+        # Global analysis
+        global_df = perform_global_analysis(valid_df, control_df if len(control_df) > 0 else None)
+        global_df.to_excel(writer, sheet_name='Global_Analysis', index=False)
 
-        # Extended analyses
-        perform_trend_analysis(df).to_excel(writer, sheet_name='Trend_Analysis', index=False)
-        perform_logistic_regression(df).to_excel(writer, sheet_name='Logistic_Regression', index=False)
-        perform_distance_analysis(df).to_excel(writer, sheet_name='Distance_Analysis', index=False)
-        perform_plddt_score_analysis(df).to_excel(writer, sheet_name='pLDDT_Score', index=False)
-        perform_roc_analysis(df).to_excel(writer, sheet_name='ROC_Analysis', index=False)
-        perform_position_analysis(df).to_excel(writer, sheet_name='Position_Analysis', index=False)
-        perform_bootstrap_analysis(df).to_excel(writer, sheet_name='Bootstrap_CI', index=False)
-        perform_multiple_acidic_analysis(df).to_excel(writer, sheet_name='Multiple_Acidic', index=False)
+        # Score-stratified analysis
+        strata_sheets = perform_stratified_analysis(valid_df)
+        for sheet_name, sheet_df in strata_sheets.items():
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-    print(f"Analysis complete. Output: {output_file}")
+        # Predictors of high score
+        predictors_results = analyze_score_predictors(valid_df)
+        pd.DataFrame(predictors_results).to_excel(writer, sheet_name='Score_Predictors', index=False)
+
+        # Control comparison sheet (detailed)
+        if len(control_df) > 0:
+            control_comparison = compare_sites_vs_control(valid_df, control_df)
+            pd.DataFrame(control_comparison).to_excel(writer, sheet_name='Sites_vs_Control', index=False)
+
+            # Control Flex vs Struct
+            control_flex_struct = compare_flex_vs_struct(control_df, "CONTROL LYSINES:")
+            pd.DataFrame(control_flex_struct).to_excel(writer, sheet_name='Control_FlexVsStruct', index=False)
+
+    print(f"\nAnalysis complete. Output: {output_file}")
+    return output_file
 
 
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
+        print("\nConfigurable parameters (must match sumo_site_core.py):")
+        print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
+        print(f"  DISTANCE_THRESHOLD = {DISTANCE_THRESHOLD}")
+        print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
+        print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
+        print(f"  SCORE_MEDIUM_THRESHOLD = {SCORE_MEDIUM_THRESHOLD}")
         sys.exit(1)
     analyze_file(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 
