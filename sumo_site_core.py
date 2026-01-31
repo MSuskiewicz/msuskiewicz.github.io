@@ -5,20 +5,6 @@ SUMO Site Analyzer - Core Output
 Parses Excel files with SUMO modification sites, fetches AlphaFold structures,
 and generates core analysis data.
 
-Output columns:
-- UniProt_ID_used: Resolved UniProt accession
-- Mapped_position: Position after sequence mapping (if different)
-- pLDDT_site: AlphaFold confidence at the site
-- pLDDT_11residue_avg: Average pLDDT in 11-residue window
-- AA_minus2/minus1/plus1/plus2: Flanking amino acids
-- Dist_acidic_any_A: Distance to closest acidic residue (any)
-- Dist_acidic_space_A: Distance excluding -2/+2 positions
-- N_acidic_in_space: Count of acidic residues within threshold (excl. -2/+2)
-- Forward/Inverse_consensus: Consensus motif detection
-- Flexible/Structured: Classification based on pLDDT
-- Acidic_in_space/Acidic_in_-2/+2: Acidic residue presence
-- Category: Final classification
-
 Usage:
     python sumo_site_core.py <input_excel_file> [output_file]
 """
@@ -37,15 +23,18 @@ from threading import Lock
 # CONFIGURABLE PARAMETERS
 # =============================================================================
 
-PLDDT_THRESHOLD = 65.0
-DISTANCE_THRESHOLD = 9.0
-HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
-ACIDIC_RESIDUES = {'D', 'E'}
+PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
+PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
+DISTANCE_THRESHOLD = 7.0        # Angstroms for acidic proximity
 
 # Score thresholds for stratification
-SCORE_VERY_HIGH_THRESHOLD = 800
+SCORE_VERY_HIGH_THRESHOLD = 600
 SCORE_HIGH_THRESHOLD = 400
 SCORE_MEDIUM_THRESHOLD = 200
+
+# Residue classifications
+HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
+ACIDIC_RESIDUES = {'D', 'E'}
 
 # Parallel processing settings
 MAX_WORKERS = 10
@@ -263,7 +252,6 @@ def parse_cif(content: str) -> dict:
     - pLDDT values from B-factor column
     """
     plddt, seq, coords_ca, coords_nz, acidic_coords = {}, {}, {}, {}, {}
-    lysine_positions = []
     in_atom, headers, idx = False, [], {}
 
     for line in content.split('\n'):
@@ -286,8 +274,6 @@ def parse_cif(content: str) -> dict:
                     plddt[rn] = float(p[idx['B_iso_or_equiv']])
                     seq[rn] = aa
                     coords_ca[rn] = coord
-                    if aa == 'K':
-                        lysine_positions.append(rn)
                 elif atom_name == 'NZ' and aa3 == 'LYS':
                     coords_nz[rn] = coord
                 elif atom_name == 'CG' and aa3 == 'ASP':
@@ -309,8 +295,7 @@ def parse_cif(content: str) -> dict:
         'coords_ca': coords_ca,
         'coords_nz': coords_nz,
         'acidic_coords': acidic_coords,
-        'acidic_positions': acidic_positions,
-        'lysine_positions': lysine_positions
+        'acidic_positions': acidic_positions
     }
 
 
@@ -366,23 +351,29 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
 def analyze_site(struct: dict, pos: int) -> dict:
     """Analyze a SUMO site and compute all metrics.
 
-    Returns dict with:
-    - pLDDT values (site and 11-residue average)
-    - Flanking amino acids
-    - Distances to acidic residues
-    - Consensus motif detection
-    - Flexibility classification
-    - Category assignment
+    Returns dict with all output columns.
     """
     res = {
-        'plddt_site': None, 'plddt_11avg': None,
-        'aa_m2': None, 'aa_m1': None, 'aa_p1': None, 'aa_p2': None,
-        'dist_acidic_any': None, 'closest_acidic_any': None,
-        'dist_acidic_space': None, 'closest_acidic_space': None,
+        'plddt_site': None,
+        'plddt_window_avg': None,
+        'aa_m2': None,
+        'aa_m1': None,
+        'aa_site': None,
+        'aa_p1': None,
+        'aa_p2': None,
+        'dist_acidic_any': None,
+        'closest_acidic_any': None,
+        'dist_acidic_not_flank': None,
+        'closest_acidic_not_flank': None,
         'n_acidic_within_threshold': 0,
-        'forward_consensus': None, 'inverse_consensus': None,
-        'flexible': None, 'structured': None,
-        'acidic_in_space': None, 'acidic_in_flank': None, 'category': None
+        'flexible': None,
+        'structured': None,
+        'forward_consensus': None,
+        'inverse_consensus': None,
+        'acidic_in_flank': None,
+        'acidic_in_space': None,
+        'any_acidic_within_threshold': None,
+        'category': None
     }
 
     if not struct or pos not in struct['plddt']:
@@ -396,82 +387,96 @@ def analyze_site(struct: dict, pos: int) -> dict:
 
     # pLDDT values
     res['plddt_site'] = plddt.get(pos)
-    window_vals = [plddt[i] for i in range(pos - 5, pos + 6) if i in plddt]
-    res['plddt_11avg'] = sum(window_vals) / len(window_vals) if window_vals else None
 
-    # Flanking amino acids
+    # Window average using configurable window length
+    half_window = PLDDT_WINDOW_LENGTH // 2
+    window_vals = [plddt[i] for i in range(pos - half_window, pos + half_window + 1) if i in plddt]
+    res['plddt_window_avg'] = round(sum(window_vals) / len(window_vals), 2) if window_vals else None
+
+    # Flanking amino acids and site itself
     res['aa_m2'] = seq.get(pos - 2)
     res['aa_m1'] = seq.get(pos - 1)
+    res['aa_site'] = seq.get(pos)
     res['aa_p1'] = seq.get(pos + 1)
     res['aa_p2'] = seq.get(pos + 2)
 
     # Calculate distances using NZ of Lys to CG/CD of acidic residues
     if pos in coords_nz and acidic_positions:
         lys_nz_coord = coords_nz[pos]
+
         min_any, cls_any = float('inf'), None
-        min_space, cls_space = float('inf'), None
+        min_not_flank, cls_not_flank = float('inf'), None
         n_within = 0
 
-        for ac in acidic_positions:
-            if ac not in acidic_coords:
+        for ac_pos in acidic_positions:
+            if ac_pos not in acidic_coords:
                 continue
-            d = calc_distance(lys_nz_coord, acidic_coords[ac])
+            d = calc_distance(lys_nz_coord, acidic_coords[ac_pos])
+            rel_pos = ac_pos - pos
 
-            # Count acidic within threshold (excluding -2/+2)
-            rel_pos = ac - pos
-            if rel_pos != -2 and rel_pos != 2 and d <= DISTANCE_THRESHOLD:
+            # Count all acidic within threshold (including neighbors)
+            if d <= DISTANCE_THRESHOLD:
                 n_within += 1
 
+            # Closest acidic anywhere (any position)
             if d < min_any:
-                min_any, cls_any = d, ac
+                min_any, cls_any = d, ac_pos
 
+            # Closest acidic NOT at -2 or +2 (but can be -1, +1, or elsewhere)
             if rel_pos != -2 and rel_pos != 2:
-                if d < min_space:
-                    min_space, cls_space = d, ac
+                if d < min_not_flank:
+                    min_not_flank, cls_not_flank = d, ac_pos
 
         res['n_acidic_within_threshold'] = n_within
 
         if cls_any:
             res['dist_acidic_any'] = round(min_any, 2)
             res['closest_acidic_any'] = f"{seq.get(cls_any, '?')}{cls_any}"
-        if cls_space:
-            res['dist_acidic_space'] = round(min_space, 2)
-            res['closest_acidic_space'] = f"{seq.get(cls_space, '?')}{cls_space}"
+        if cls_not_flank:
+            res['dist_acidic_not_flank'] = round(min_not_flank, 2)
+            res['closest_acidic_not_flank'] = f"{seq.get(cls_not_flank, '?')}{cls_not_flank}"
 
-    # Consensus motifs
-    res['forward_consensus'] = 'Yes' if res['aa_m1'] in HYDROPHOBIC_RESIDUES and res['aa_p2'] in ACIDIC_RESIDUES else None
-    res['inverse_consensus'] = 'Yes' if res['aa_p1'] in HYDROPHOBIC_RESIDUES and res['aa_m2'] in ACIDIC_RESIDUES else None
-
-    # Flexibility classification
-    if res['plddt_11avg'] is not None:
-        if res['plddt_11avg'] < PLDDT_THRESHOLD:
+    # Flexibility classification based on window average pLDDT
+    if res['plddt_window_avg'] is not None:
+        if res['plddt_window_avg'] < PLDDT_THRESHOLD:
             res['flexible'] = 'Yes'
         else:
             res['structured'] = 'Yes'
 
-    # Acidic in space (within distance threshold, excluding -2/+2)
-    if res['dist_acidic_space'] is not None and res['dist_acidic_space'] <= DISTANCE_THRESHOLD:
-        res['acidic_in_space'] = 'Yes'
+    # Consensus motifs
+    # Forward: ψKxE (hydrophobic at -1, acidic at +2)
+    res['forward_consensus'] = 'Yes' if res['aa_m1'] in HYDROPHOBIC_RESIDUES and res['aa_p2'] in ACIDIC_RESIDUES else None
+    # Inverse: ExKψ (acidic at -2, hydrophobic at +1)
+    res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
 
-    # Acidic in flank (-2 or +2 position)
+    # Acidic in -2/+2 specifically (not -1/+1)
     if res['aa_m2'] in ACIDIC_RESIDUES or res['aa_p2'] in ACIDIC_RESIDUES:
         res['acidic_in_flank'] = 'Yes'
 
-    # Category assignment (hierarchical: consensus > flank_acidic > space_acidic > neither)
+    # Acidic in space within threshold (other than -2 or +2 specifically)
+    if res['dist_acidic_not_flank'] is not None and res['dist_acidic_not_flank'] <= DISTANCE_THRESHOLD:
+        res['acidic_in_space'] = 'Yes'
+
+    # Any acidic within threshold (can be neighboring)
+    if res['n_acidic_within_threshold'] > 0:
+        res['any_acidic_within_threshold'] = 'Yes'
+
+    # Category assignment (hierarchical: consensus > flankacidic > space > none)
     is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
     is_flank_acidic = (res['acidic_in_flank'] == 'Yes')
     is_space_acidic = (res['acidic_in_space'] == 'Yes')
+    has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
 
     prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
 
     if is_consensus:
         suffix = "_consensus"
     elif is_flank_acidic:
-        suffix = "_flank_acidic"
-    elif is_space_acidic:
-        suffix = "_space_acidic"
+        suffix = "_flankacidic"
+    elif has_any_acidic:  # This covers space acidic and neighboring acidic
+        suffix = "_space"
     else:
-        suffix = "_neither"
+        suffix = "_none"
 
     res['category'] = prefix + suffix
     return res
@@ -484,6 +489,12 @@ def analyze_site(struct: dict, pos: int) -> dict:
 def process_file(input_file: str, output_file: str = None):
     """Process input Excel file and generate output with SUMO site analysis."""
     print(f"\n{'=' * 60}\nSUMO Site Analyzer - Core Output\n{'=' * 60}\n")
+    print(f"Parameters:")
+    print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
+    print(f"  pLDDT window length: {PLDDT_WINDOW_LENGTH}")
+    print(f"  Distance threshold: {DISTANCE_THRESHOLD} Å")
+    print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
+    print()
 
     df = pd.read_excel(input_file, sheet_name=0, header=1)
     df = df.iloc[:, :27]
@@ -523,36 +534,58 @@ def process_file(input_file: str, output_file: str = None):
 
     # Build result DataFrame
     res_df = pd.DataFrame(results)
+
+    # Column mapping to final names
     cols_map = {
         'used_id': 'UniProt_ID_used',
         'mapped_pos': 'Mapped_position',
         'plddt_site': 'pLDDT_site',
-        'plddt_11avg': 'pLDDT_11residue_avg',
-        'aa_m2': 'AA_minus2',
-        'aa_m1': 'AA_minus1',
-        'aa_p1': 'AA_plus1',
-        'aa_p2': 'AA_plus2',
+        'plddt_window_avg': 'pLDDT_window_avg',
+        'aa_m2': 'AA_-2',
+        'aa_m1': 'AA_-1',
+        'aa_site': 'AA_site',
+        'aa_p1': 'AA_+1',
+        'aa_p2': 'AA_+2',
         'dist_acidic_any': 'Dist_acidic_any_A',
         'closest_acidic_any': 'Closest_acidic_any',
-        'dist_acidic_space': 'Dist_acidic_space_A',
-        'closest_acidic_space': 'Closest_acidic_space',
-        'n_acidic_within_threshold': 'N_acidic_in_space',
-        'forward_consensus': 'Forward_consensus',
-        'inverse_consensus': 'Inverse_consensus',
+        'dist_acidic_not_flank': 'Dist_acidic_notflank_A',
+        'closest_acidic_not_flank': 'Closest_acidic_notflank',
+        'n_acidic_within_threshold': 'N_acidic_within_threshold',
         'flexible': 'Flexible',
         'structured': 'Structured',
-        'acidic_in_space': 'Acidic_in_space',
+        'forward_consensus': 'Forward_consensus',
+        'inverse_consensus': 'Inverse_consensus',
         'acidic_in_flank': 'Acidic_in_-2/+2',
+        'acidic_in_space': 'Acidic_in_space',
+        'any_acidic_within_threshold': 'Any_acidic_within_threshold',
         'category': 'Category'
     }
     res_df = res_df.rename(columns=cols_map)
 
+    # Order columns as requested
     ordered_cols = [
-        'UniProt_ID_used', 'Mapped_position', 'pLDDT_site', 'pLDDT_11residue_avg',
-        'AA_minus2', 'AA_minus1', 'AA_plus1', 'AA_plus2',
-        'Dist_acidic_any_A', 'Closest_acidic_any', 'Dist_acidic_space_A', 'Closest_acidic_space',
-        'N_acidic_in_space', 'Forward_consensus', 'Inverse_consensus', 'Flexible', 'Structured',
-        'Acidic_in_space', 'Acidic_in_-2/+2', 'Category'
+        'UniProt_ID_used',
+        'Mapped_position',
+        'pLDDT_site',
+        'pLDDT_window_avg',
+        'AA_-2',
+        'AA_-1',
+        'AA_site',
+        'AA_+1',
+        'AA_+2',
+        'Dist_acidic_any_A',
+        'Closest_acidic_any',
+        'Dist_acidic_notflank_A',
+        'Closest_acidic_notflank',
+        'N_acidic_within_threshold',
+        'Flexible',
+        'Structured',
+        'Forward_consensus',
+        'Inverse_consensus',
+        'Acidic_in_-2/+2',
+        'Acidic_in_space',
+        'Any_acidic_within_threshold',
+        'Category'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 
@@ -567,7 +600,7 @@ def process_file(input_file: str, output_file: str = None):
     print(f"\n{'=' * 40}")
     print("DATA COMPLETENESS SUMMARY")
     print(f"{'=' * 40}")
-    print(f"Total sites:          {total_sites}")
+    print(f"Total sites:           {total_sites}")
     print(f"Successfully resolved: {success_count} ({success_rate:.1f}%)")
     print(f"Failed to resolve:     {failed_count}")
     print(f"{'=' * 40}\n")
@@ -586,6 +619,13 @@ def process_file(input_file: str, output_file: str = None):
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
+        print("\nConfigurable parameters (edit at top of script):")
+        print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
+        print(f"  PLDDT_WINDOW_LENGTH = {PLDDT_WINDOW_LENGTH}")
+        print(f"  DISTANCE_THRESHOLD = {DISTANCE_THRESHOLD}")
+        print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
+        print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
+        print(f"  SCORE_MEDIUM_THRESHOLD = {SCORE_MEDIUM_THRESHOLD}")
         sys.exit(1)
     process_file(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 
