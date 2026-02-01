@@ -26,9 +26,13 @@ from threading import Lock
 PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
 PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
 
-# Distance thresholds (separate for flexible and structured sites)
-DISTANCE_THRESHOLD_FLEXIBLE = 8.0    # Angstroms for Cα-Cα distance in flexible sites
-DISTANCE_THRESHOLD_STRUCTURED = 8.0  # Angstroms for NZ-CG/CD distance in structured sites
+# Distance thresholds (Cα-Cα based, minimum and maximum)
+DISTANCE_THRESHOLD_MIN = 4.9    # Minimum Cα-Cα distance in Angstroms
+DISTANCE_THRESHOLD_MAX = 8.0    # Maximum Cα-Cα distance in Angstroms
+
+# Surface exposure parameters (neighbor counting method)
+EXPOSURE_DISTANCE_THRESHOLD = 10.0  # Angstroms - radius for counting CB neighbors
+EXPOSURE_NEIGHBOR_THRESHOLD = 18    # Fewer than this many neighbors = exposed
 
 # Score thresholds for stratification
 SCORE_VERY_HIGH_THRESHOLD = 600
@@ -249,21 +253,59 @@ def fetch_alphafold(uid: str, fragment: int = 1) -> dict | None:
 
 
 def parse_cif(content: str) -> dict:
-    """Parse mmCIF file to extract coordinates and pLDDT values.
+    """Parse mmCIF file to extract coordinates, pLDDT values, and secondary structure.
 
     Extracts:
-    - CA coordinates for all residues
-    - NZ coordinates for lysines (for structured site distance calculations)
-    - CG coordinates for Asp, CD coordinates for Glu (for structured site distances)
-    - Acidic CA coordinates (for flexible site Cα-Cα distances)
+    - CA coordinates for all residues (for Cα-Cα distance calculations)
+    - CB coordinates for all residues (for exposure calculation via neighbor counting)
     - pLDDT values from B-factor column
+    - Secondary structure from _struct_conf category (helix/strand/coil)
     """
-    plddt, seq, coords_ca, coords_nz = {}, {}, {}, {}
-    acidic_coords_sidechain = {}  # CG for Asp, CD for Glu (for structured)
-    acidic_coords_ca = {}  # CA for acidic residues (for flexible)
+    plddt, seq, coords_ca, coords_cb = {}, {}, {}, {}
+    acidic_coords_ca = {}  # CA for acidic residues
     in_atom, headers, idx = False, [], {}
 
-    for line in content.split('\n'):
+    # Secondary structure storage
+    sec_struct = {}  # residue_num -> 'helix' | 'strand' | 'coil'
+
+    # First pass: extract secondary structure from _struct_conf
+    lines = content.split('\n')
+    in_struct_conf = False
+    struct_conf_headers = []
+    struct_conf_idx = {}
+
+    for line in lines:
+        line_stripped = line.strip()
+        if line_stripped.startswith('_struct_conf.'):
+            in_struct_conf = True
+            name = line_stripped.split('.')[1].split()[0]
+            struct_conf_idx[name] = len(struct_conf_headers)
+            struct_conf_headers.append(name)
+        elif in_struct_conf and line_stripped and not line_stripped.startswith(('_', '#', 'loop_')):
+            # Parse secondary structure entry
+            if 'conf_type_id' in struct_conf_idx:
+                try:
+                    parts = line_stripped.split()
+                    conf_type = parts[struct_conf_idx['conf_type_id']]
+                    beg_seq = int(parts[struct_conf_idx['beg_label_seq_id']])
+                    end_seq = int(parts[struct_conf_idx['end_label_seq_id']])
+
+                    ss_type = 'coil'
+                    if 'HELX' in conf_type or 'helix' in conf_type.lower():
+                        ss_type = 'helix'
+                    elif 'STRN' in conf_type or 'strand' in conf_type.lower():
+                        ss_type = 'strand'
+
+                    for pos in range(beg_seq, end_seq + 1):
+                        sec_struct[pos] = ss_type
+                except Exception:
+                    pass
+        elif in_struct_conf and (line_stripped.startswith('#') or line_stripped.startswith('loop_') or line_stripped.startswith('_')):
+            if not line_stripped.startswith('_struct_conf.'):
+                in_struct_conf = False
+
+    # Second pass: extract atom coordinates
+    for line in lines:
         line = line.strip()
         if line.startswith('_atom_site.'):
             in_atom = True
@@ -283,41 +325,77 @@ def parse_cif(content: str) -> dict:
                     plddt[rn] = float(p[idx['B_iso_or_equiv']])
                     seq[rn] = aa
                     coords_ca[rn] = coord
-                    # Also store CA for acidic residues (for flexible site calculations)
+                    # Store CA for acidic residues
                     if aa3 in ('ASP', 'GLU'):
                         acidic_coords_ca[rn] = coord
-                elif atom_name == 'NZ' and aa3 == 'LYS':
-                    coords_nz[rn] = coord
-                elif atom_name == 'CG' and aa3 == 'ASP':
-                    acidic_coords_sidechain[rn] = coord
-                elif atom_name == 'CD' and aa3 == 'GLU':
-                    acidic_coords_sidechain[rn] = coord
+                elif atom_name == 'CB':
+                    coords_cb[rn] = coord
             except Exception:
                 continue
         elif in_atom and line.startswith('#'):
             break
 
     seq_str = ''.join(seq.get(i, 'X') for i in range(1, max(seq.keys(), default=0) + 1))
-    acidic_positions = sorted(set(acidic_coords_sidechain.keys()) | set(acidic_coords_ca.keys()))
+    acidic_positions = sorted(acidic_coords_ca.keys())
+
+    # For glycines (no CB), use CA as fallback for exposure calculation
+    for rn in coords_ca:
+        if rn not in coords_cb:
+            coords_cb[rn] = coords_ca[rn]
 
     return {
         'plddt': plddt,
         'sequence': seq,
         'sequence_string': seq_str,
         'coords_ca': coords_ca,
-        'coords_nz': coords_nz,
-        'acidic_coords_sidechain': acidic_coords_sidechain,  # CG/CD for structured
-        'acidic_coords_ca': acidic_coords_ca,  # CA for flexible
-        'acidic_positions': acidic_positions
+        'coords_cb': coords_cb,  # For exposure calculation
+        'acidic_coords_ca': acidic_coords_ca,
+        'acidic_positions': acidic_positions,
+        'secondary_structure': sec_struct  # helix/strand/coil
     }
+
+
+# =============================================================================
+# EXPOSURE CALCULATION
+# =============================================================================
+
+def calculate_exposure(struct: dict, pos: int) -> bool:
+    """Determine if a residue is surface-exposed using neighbor counting.
+
+    A residue is considered exposed if it has fewer than EXPOSURE_NEIGHBOR_THRESHOLD
+    CB atoms within EXPOSURE_DISTANCE_THRESHOLD Angstroms.
+
+    Returns True if exposed, False if buried.
+    """
+    coords_cb = struct.get('coords_cb', {})
+    if pos not in coords_cb:
+        return False  # Can't determine
+
+    target_cb = coords_cb[pos]
+    neighbor_count = 0
+
+    for other_pos, other_cb in coords_cb.items():
+        if other_pos == pos:
+            continue
+        d = calc_distance(target_cb, other_cb)
+        if d <= EXPOSURE_DISTANCE_THRESHOLD:
+            neighbor_count += 1
+
+    return neighbor_count < EXPOSURE_NEIGHBOR_THRESHOLD
 
 
 # =============================================================================
 # RESOLUTION & ANALYSIS
 # =============================================================================
 
-def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cache: dict) -> tuple[dict | None, str, int]:
-    """Resolve AlphaFold structure and map position if needed."""
+def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cache: dict) -> tuple[dict | None, str, int, str | None, str | None]:
+    """Resolve AlphaFold structure and map position if needed.
+
+    Returns:
+        (struct, used_id, final_pos, original_seq, af_seq)
+        - original_seq and af_seq are returned when isoform mapping was used,
+          to enable reverse mapping of acidic positions back to original coords
+    """
     cache_key = f"resolve_{uid}_{isoform}_{pos}"
     if cache_key in cache:
         return cache[cache_key]
@@ -334,21 +412,29 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
 
     if struct:
         final_pos = pos
+        original_seq = None
+        af_seq = None
         if isoform:
             iso_seq = get_uniprot_sequence(uid, isoform, cache)
             if iso_seq:
                 mapped = map_position_by_residue(iso_seq, struct['sequence_string'], pos)
                 if mapped:
                     final_pos = mapped
+                    original_seq = iso_seq
+                    af_seq = struct['sequence_string']
                 else:
-                    return (None, uid, pos)
-        result = (struct, uid, final_pos)
+                    result = (None, uid, pos, None, None)
+                    cache[cache_key] = result
+                    return result
+        result = (struct, uid, final_pos, original_seq, af_seq)
         cache[cache_key] = result
         return result
 
     original_seq = get_unisave_sequence(uid, cache, min_length=pos) or get_uniprot_sequence(uid, isoform, cache)
     if not original_seq or pos > len(original_seq):
-        return (None, uid, pos)
+        result = (None, uid, pos, None, None)
+        cache[cache_key] = result
+        return result
 
     target_acc = get_mapped_accession(uid, cache)
     if target_acc:
@@ -356,19 +442,37 @@ def resolve_structure_and_position(uid: str, isoform: int | None, pos: int, cach
         if struct:
             mapped_pos = map_position_by_residue(original_seq, struct['sequence_string'], pos)
             if mapped_pos:
-                return (struct, target_acc, mapped_pos)
+                result = (struct, target_acc, mapped_pos, original_seq, struct['sequence_string'])
+                cache[cache_key] = result
+                return result
 
-    return (None, uid, pos)
+    result = (None, uid, pos, None, None)
+    cache[cache_key] = result
+    return result
 
 
-def analyze_site(struct: dict, pos: int) -> dict:
+def analyze_site(struct: dict, pos: int, original_pos: int = None,
+                 original_seq: str = None, af_seq: str = None) -> dict:
     """Analyze a SUMO site and compute all metrics.
 
-    Distance calculation depends on flexibility of BOTH residues:
-    - If EITHER lysine OR acidic has pLDDT < threshold: use Cα-Cα distance
-    - If BOTH lysine AND acidic have pLDDT >= threshold: use NZ-CG/CD distance
+    Uses Cα-Cα distance for all calculations.
+    Distance thresholds: minimum 4.9Å, maximum 8.0Å.
 
-    Returns dict with all output columns.
+    When original_seq and af_seq are provided, acidic positions are mapped back
+    to original sequence coordinates for consistent reporting.
+
+    Args:
+        struct: Parsed AlphaFold structure
+        pos: Position in AF model coordinates
+        original_pos: Original position before mapping (for relative position calc)
+        original_seq: Original isoform/input sequence (for reverse mapping)
+        af_seq: AlphaFold model sequence (for reverse mapping)
+
+    Returns dict with all output columns including:
+    - Lists of acidic residues within threshold (with exposure markers)
+    - Distances in Angstroms
+    - Relative positions from lysine
+    - Secondary structure
     """
     res = {
         'plddt_site': None,
@@ -378,35 +482,34 @@ def analyze_site(struct: dict, pos: int) -> dict:
         'aa_site': None,
         'aa_p1': None,
         'aa_p2': None,
-        'dist_acidic_any': None,
-        'closest_acidic_any': None,
-        'dist_acidic_not_flank': None,
-        'closest_acidic_not_flank': None,
-        'n_acidic_within_threshold': 0,
+        'acidics_within_threshold': None,      # List: "D123(exp),E456"
+        'distances_angstroms': None,           # List: "5.2,6.8"
+        'distances_positions': None,           # List: "-5(exp),+20"
         'flexible': None,
         'structured': None,
+        'secondary_structure': None,           # helix/strand/coil
         'forward_consensus': None,
         'inverse_consensus': None,
-        'acidic_in_flank': None,
-        'acidic_in_space': None,
         'any_acidic_within_threshold': None,
+        'exposed_acidic_within_threshold': None,
         'category': None
     }
 
     if not struct or pos not in struct['plddt']:
         return res
 
+    # Use original position for relative calculations if provided
+    site_pos_for_rel = original_pos if original_pos is not None else pos
+
     plddt = struct['plddt']
     seq = struct['sequence']
     coords_ca = struct['coords_ca']
-    coords_nz = struct['coords_nz']
-    acidic_coords_sidechain = struct['acidic_coords_sidechain']
     acidic_coords_ca = struct['acidic_coords_ca']
     acidic_positions = struct['acidic_positions']
+    sec_struct = struct.get('secondary_structure', {})
 
     # pLDDT values
     res['plddt_site'] = plddt.get(pos)
-    lys_plddt = plddt.get(pos, 0)
 
     # Window average using configurable window length
     half_window = PLDDT_WINDOW_LENGTH // 2
@@ -421,78 +524,84 @@ def analyze_site(struct: dict, pos: int) -> dict:
     res['aa_p2'] = seq.get(pos + 2)
 
     # Determine flexibility based on window average
-    lys_is_flexible = False
     if res['plddt_window_avg'] is not None:
         if res['plddt_window_avg'] < PLDDT_THRESHOLD:
             res['flexible'] = 'Yes'
-            lys_is_flexible = True
         else:
             res['structured'] = 'Yes'
 
-    # Calculate distances - method depends on BOTH lysine AND acidic pLDDT
-    # If EITHER is below threshold: use Cα-Cα
-    # If BOTH are above threshold: use NZ-CG/CD
-    lys_ca = coords_ca.get(pos)
-    lys_nz = coords_nz.get(pos)
+    # Secondary structure from AlphaFold model
+    ss = sec_struct.get(pos)
+    if ss:
+        res['secondary_structure'] = ss
+    else:
+        res['secondary_structure'] = 'coil'  # Default if not defined
 
-    if acidic_positions and (lys_ca or lys_nz):
-        min_any, cls_any = float('inf'), None
-        min_not_flank, cls_not_flank = float('inf'), None
-        n_within = 0
+    # Calculate Cα-Cα distances to all acidic residues
+    lys_ca = coords_ca.get(pos)
+
+    if acidic_positions and lys_ca:
+        # Collect all acidics within the threshold range (min to max)
+        # Store: (acidic_pos_af, acidic_pos_orig, distance, is_exposed)
+        acidics_info = []
 
         for ac_pos in acidic_positions:
-            ac_plddt = plddt.get(ac_pos, 0)
+            if ac_pos not in acidic_coords_ca:
+                continue
 
-            # Determine which distance calculation to use for this pair
-            # Use Cα-Cα if EITHER residue is flexible (pLDDT < threshold)
-            # Use NZ-CG/CD only if BOTH are structured (pLDDT >= threshold)
-            if lys_plddt < PLDDT_THRESHOLD or ac_plddt < PLDDT_THRESHOLD:
-                # At least one is flexible - use Cα-Cα
-                if lys_ca is None or ac_pos not in acidic_coords_ca:
-                    continue
-                d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
-                distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
-            else:
-                # Both are structured - use NZ-CG/CD
-                if lys_nz is None or ac_pos not in acidic_coords_sidechain:
-                    continue
-                d = calc_distance(lys_nz, acidic_coords_sidechain[ac_pos])
-                distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
+            d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
 
-            rel_pos = ac_pos - pos
+            # Check if within threshold range (min <= d <= max)
+            if DISTANCE_THRESHOLD_MIN <= d <= DISTANCE_THRESHOLD_MAX:
+                is_exposed = calculate_exposure(struct, ac_pos)
 
-            # Count all acidic within threshold (including neighbors)
-            if d <= distance_threshold:
-                n_within += 1
+                # Map acidic position back to original coordinates if needed
+                if original_seq and af_seq:
+                    # Reverse map: AF model position -> original isoform position
+                    mapped_ac_pos = map_position_by_residue(af_seq, original_seq, ac_pos)
+                    if mapped_ac_pos is None:
+                        # This acidic doesn't exist in the original isoform - skip it
+                        continue
+                    ac_pos_for_report = mapped_ac_pos
+                else:
+                    ac_pos_for_report = ac_pos
 
-            # Closest acidic anywhere (any position)
-            if d < min_any:
-                min_any, cls_any = d, ac_pos
+                acidics_info.append((ac_pos, ac_pos_for_report, d, is_exposed))
 
-            # Closest acidic NOT at -2 or +2 (but can be -1, +1, or elsewhere)
-            if rel_pos != -2 and rel_pos != 2:
-                if d < min_not_flank:
-                    min_not_flank, cls_not_flank = d, ac_pos
+        # Sort by distance
+        acidics_info.sort(key=lambda x: x[2])
 
-        res['n_acidic_within_threshold'] = n_within
+        if acidics_info:
+            # Build lists for output
+            acidic_labels = []
+            distance_labels = []
+            position_labels = []
 
-        if cls_any:
-            res['dist_acidic_any'] = round(min_any, 2)
-            res['closest_acidic_any'] = f"{seq.get(cls_any, '?')}{cls_any}"
-        if cls_not_flank:
-            res['dist_acidic_not_flank'] = round(min_not_flank, 2)
-            res['closest_acidic_not_flank'] = f"{seq.get(cls_not_flank, '?')}{cls_not_flank}"
+            has_exposed = False
 
-        # Acidic in space: check if closest not-flank acidic is within its threshold
-        if cls_not_flank:
-            ac_plddt = plddt.get(cls_not_flank, 0)
-            threshold = DISTANCE_THRESHOLD_FLEXIBLE if (lys_plddt < PLDDT_THRESHOLD or ac_plddt < PLDDT_THRESHOLD) else DISTANCE_THRESHOLD_STRUCTURED
-            if res['dist_acidic_not_flank'] <= threshold:
-                res['acidic_in_space'] = 'Yes'
+            for ac_pos_af, ac_pos_report, dist, is_exposed in acidics_info:
+                aa = seq.get(ac_pos_af, '?')
+                # Use reported position for relative calculation
+                rel_pos = ac_pos_report - site_pos_for_rel
+                rel_pos_str = f"+{rel_pos}" if rel_pos > 0 else str(rel_pos)
 
-        # Any acidic within threshold (can be neighboring)
-        if res['n_acidic_within_threshold'] > 0:
+                if is_exposed:
+                    acidic_labels.append(f"{aa}{ac_pos_report}(exp)")
+                    distance_labels.append(f"{dist:.1f}(exp)")
+                    position_labels.append(f"{rel_pos_str}(exp)")
+                    has_exposed = True
+                else:
+                    acidic_labels.append(f"{aa}{ac_pos_report}")
+                    distance_labels.append(f"{dist:.1f}")
+                    position_labels.append(rel_pos_str)
+
+            res['acidics_within_threshold'] = ','.join(acidic_labels)
+            res['distances_angstroms'] = ','.join(distance_labels)
+            res['distances_positions'] = ','.join(position_labels)
             res['any_acidic_within_threshold'] = 'Yes'
+
+            if has_exposed:
+                res['exposed_acidic_within_threshold'] = 'Yes'
 
     # Consensus motifs
     # Forward: ψKxE (hydrophobic at -1, acidic at +2)
@@ -500,25 +609,21 @@ def analyze_site(struct: dict, pos: int) -> dict:
     # Inverse: ExKψ (acidic at -2, hydrophobic at +1)
     res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
 
-    # Acidic in -2/+2 specifically (not -1/+1)
-    if res['aa_m2'] in ACIDIC_RESIDUES or res['aa_p2'] in ACIDIC_RESIDUES:
-        res['acidic_in_flank'] = 'Yes'
-
-    # Category assignment (hierarchical: consensus > flankacidic > space > none)
+    # Category assignment
     is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
-    is_flank_acidic = (res['acidic_in_flank'] == 'Yes')
     has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
+    has_exposed_acidic = (res['exposed_acidic_within_threshold'] == 'Yes')
 
     prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
 
     if is_consensus:
         suffix = "_consensus"
-    elif is_flank_acidic:
-        suffix = "_flankacidic"
-    elif has_any_acidic:  # This covers space acidic and neighboring acidic
-        suffix = "_space"
+    elif has_exposed_acidic:
+        suffix = "_exposed_acidic"
+    elif has_any_acidic:
+        suffix = "_buried_acidic"
     else:
-        suffix = "_none"
+        suffix = "_no_acidic"
 
     res['category'] = prefix + suffix
     return res
@@ -534,9 +639,8 @@ def process_file(input_file: str, output_file: str = None):
     print(f"Parameters:")
     print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
     print(f"  pLDDT window length: {PLDDT_WINDOW_LENGTH}")
-    print(f"  Distance threshold (flexible, Cα-Cα): {DISTANCE_THRESHOLD_FLEXIBLE} Å")
-    print(f"  Distance threshold (structured, NZ-CG/CD): {DISTANCE_THRESHOLD_STRUCTURED} Å")
-    print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
+    print(f"  Distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Exposure parameters: {EXPOSURE_DISTANCE_THRESHOLD} Å radius, <{EXPOSURE_NEIGHBOR_THRESHOLD} neighbors = exposed")
     print(f"  Sliding window length: {SLIDING_WINDOW_LENGTH}")
     print()
 
@@ -555,8 +659,10 @@ def process_file(input_file: str, output_file: str = None):
         except Exception:
             return idx, {'used_id': uid, 'mapped_pos': None}
 
-        struct, used_id, final_pos = resolve_structure_and_position(uid, iso, pos, cache)
-        analysis = analyze_site(struct, final_pos)
+        struct, used_id, final_pos, original_seq, af_seq = resolve_structure_and_position(uid, iso, pos, cache)
+        # Pass original position and sequences for consistent coordinate reporting
+        analysis = analyze_site(struct, final_pos, original_pos=pos,
+                                original_seq=original_seq, af_seq=af_seq)
         analysis.update({'used_id': used_id, 'mapped_pos': final_pos if final_pos != pos else None})
         return idx, analysis
 
@@ -585,11 +691,7 @@ def process_file(input_file: str, output_file: str = None):
     is_structured = (res_df['structured'] == 'Yes').astype(int)
     is_consensus = ((res_df['forward_consensus'] == 'Yes') | (res_df['inverse_consensus'] == 'Yes')).astype(int)
     has_any_acidic = (res_df['any_acidic_within_threshold'] == 'Yes').astype(int)
-    has_flank_acidic = (res_df['acidic_in_flank'] == 'Yes').astype(int)
-
-    # Flexible sites with any acidic, Structured sites with any acidic
-    flex_with_acidic = (is_flexible == 1) & (has_any_acidic == 1)
-    struct_with_acidic = (is_structured == 1) & (has_any_acidic == 1)
+    has_exposed_acidic = (res_df['exposed_acidic_within_threshold'] == 'Yes').astype(int)
 
     # Calculate sliding window fractions (centered window)
     half_window = SLIDING_WINDOW_LENGTH // 2
@@ -625,7 +727,7 @@ def process_file(input_file: str, output_file: str = None):
     res_df['sliding_frac_flexible'] = calc_sliding_fraction(is_flexible)
     res_df['sliding_frac_consensus'] = calc_sliding_fraction(is_consensus)
     res_df['sliding_frac_any_acidic'] = calc_sliding_fraction(has_any_acidic)
-    res_df['sliding_frac_flank_acidic'] = calc_sliding_fraction(has_flank_acidic)
+    res_df['sliding_frac_exposed_acidic'] = calc_sliding_fraction(has_exposed_acidic)
 
     # Fraction of Flexible sites that have acidic (among Flexible sites only)
     res_df['sliding_frac_flex_with_acidic'] = calc_conditional_sliding_fraction(
@@ -645,23 +747,21 @@ def process_file(input_file: str, output_file: str = None):
         'aa_site': 'AA_site',
         'aa_p1': 'AA_+1',
         'aa_p2': 'AA_+2',
-        'dist_acidic_any': 'Dist_acidic_any_A',
-        'closest_acidic_any': 'Closest_acidic_any',
-        'dist_acidic_not_flank': 'Dist_acidic_notflank_A',
-        'closest_acidic_not_flank': 'Closest_acidic_notflank',
-        'n_acidic_within_threshold': 'N_acidic_within_threshold',
+        'acidics_within_threshold': 'Acidics_within_threshold',
+        'distances_angstroms': 'Distances_Angstroms',
+        'distances_positions': 'Distances_positions',
         'flexible': 'Flexible',
         'structured': 'Structured',
+        'secondary_structure': 'Secondary_structure',
         'forward_consensus': 'Forward_consensus',
         'inverse_consensus': 'Inverse_consensus',
-        'acidic_in_flank': 'Acidic_in_-2/+2',
-        'acidic_in_space': 'Acidic_in_space',
         'any_acidic_within_threshold': 'Any_acidic_within_threshold',
+        'exposed_acidic_within_threshold': 'Exposed_acidic_within_threshold',
         'category': 'Category',
         'sliding_frac_flexible': 'Sliding_frac_Flexible',
         'sliding_frac_consensus': 'Sliding_frac_Consensus',
         'sliding_frac_any_acidic': 'Sliding_frac_Any_acidic',
-        'sliding_frac_flank_acidic': 'Sliding_frac_Acidic_in_-2/+2',
+        'sliding_frac_exposed_acidic': 'Sliding_frac_Exposed_acidic',
         'sliding_frac_flex_with_acidic': 'Sliding_frac_Flex_with_acidic',
         'sliding_frac_struct_with_acidic': 'Sliding_frac_Struct_with_acidic'
     }
@@ -678,23 +778,21 @@ def process_file(input_file: str, output_file: str = None):
         'AA_site',
         'AA_+1',
         'AA_+2',
-        'Dist_acidic_any_A',
-        'Closest_acidic_any',
-        'Dist_acidic_notflank_A',
-        'Closest_acidic_notflank',
-        'N_acidic_within_threshold',
+        'Acidics_within_threshold',
+        'Distances_Angstroms',
+        'Distances_positions',
         'Flexible',
         'Structured',
+        'Secondary_structure',
         'Forward_consensus',
         'Inverse_consensus',
-        'Acidic_in_-2/+2',
-        'Acidic_in_space',
         'Any_acidic_within_threshold',
+        'Exposed_acidic_within_threshold',
         'Category',
         'Sliding_frac_Flexible',
         'Sliding_frac_Consensus',
         'Sliding_frac_Any_acidic',
-        'Sliding_frac_Acidic_in_-2/+2',
+        'Sliding_frac_Exposed_acidic',
         'Sliding_frac_Flex_with_acidic',
         'Sliding_frac_Struct_with_acidic'
     ]
@@ -733,12 +831,11 @@ def main():
         print("\nConfigurable parameters (edit at top of script):")
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
         print(f"  PLDDT_WINDOW_LENGTH = {PLDDT_WINDOW_LENGTH}")
-        print(f"  DISTANCE_THRESHOLD_FLEXIBLE = {DISTANCE_THRESHOLD_FLEXIBLE} (Cα-Cα)")
-        print(f"  DISTANCE_THRESHOLD_STRUCTURED = {DISTANCE_THRESHOLD_STRUCTURED} (NZ-CG/CD)")
+        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα)")
+        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα)")
+        print(f"  EXPOSURE_DISTANCE_THRESHOLD = {EXPOSURE_DISTANCE_THRESHOLD} Å")
+        print(f"  EXPOSURE_NEIGHBOR_THRESHOLD = {EXPOSURE_NEIGHBOR_THRESHOLD}")
         print(f"  SLIDING_WINDOW_LENGTH = {SLIDING_WINDOW_LENGTH}")
-        print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
-        print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
-        print(f"  SCORE_MEDIUM_THRESHOLD = {SCORE_MEDIUM_THRESHOLD}")
         sys.exit(1)
     process_file(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 

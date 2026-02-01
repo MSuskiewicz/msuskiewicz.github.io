@@ -34,9 +34,13 @@ import logging
 PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
 PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
 
-# Distance thresholds (separate for flexible and structured sites)
-DISTANCE_THRESHOLD_FLEXIBLE = 8.0    # Angstroms for Cα-Cα distance in flexible sites
-DISTANCE_THRESHOLD_STRUCTURED = 8.0  # Angstroms for NZ-CG/CD distance in structured sites
+# Distance thresholds (Cα-Cα based, minimum and maximum)
+DISTANCE_THRESHOLD_MIN = 4.9    # Minimum Cα-Cα distance in Angstroms
+DISTANCE_THRESHOLD_MAX = 8.0    # Maximum Cα-Cα distance in Angstroms
+
+# Surface exposure parameters (neighbor counting method)
+EXPOSURE_DISTANCE_THRESHOLD = 10.0  # Angstroms - radius for counting CB neighbors
+EXPOSURE_NEIGHBOR_THRESHOLD = 18    # Fewer than this many neighbors = exposed
 
 # Score thresholds for stratification
 SCORE_VERY_HIGH_THRESHOLD = 600
@@ -122,15 +126,12 @@ def parse_cif(content: str) -> dict:
     """Parse mmCIF file to extract coordinates and pLDDT values.
 
     Extracts:
-    - CA coordinates for all residues
-    - NZ coordinates for lysines (for structured site distance calculations)
-    - CG coordinates for Asp, CD coordinates for Glu (for structured site distances)
-    - Acidic CA coordinates (for flexible site Cα-Cα distances)
+    - CA coordinates for all residues (for Cα-Cα distance calculations)
+    - CB coordinates for all residues (for exposure calculation)
     - pLDDT values from B-factor column
     """
-    plddt, seq, coords_ca, coords_nz = {}, {}, {}, {}
-    acidic_coords_sidechain = {}  # CG for Asp, CD for Glu (for structured)
-    acidic_coords_ca = {}  # CA for acidic residues (for flexible)
+    plddt, seq, coords_ca, coords_cb = {}, {}, {}, {}
+    acidic_coords_ca = {}  # CA for acidic residues
     in_atom, headers, idx = False, [], {}
 
     for line in content.split('\n'):
@@ -153,52 +154,68 @@ def parse_cif(content: str) -> dict:
                     plddt[rn] = float(p[idx['B_iso_or_equiv']])
                     seq[rn] = aa
                     coords_ca[rn] = coord
-                    # Also store CA for acidic residues (for flexible site calculations)
                     if aa3 in ('ASP', 'GLU'):
                         acidic_coords_ca[rn] = coord
-                elif atom_name == 'NZ' and aa3 == 'LYS':
-                    coords_nz[rn] = coord
-                elif atom_name == 'CG' and aa3 == 'ASP':
-                    acidic_coords_sidechain[rn] = coord
-                elif atom_name == 'CD' and aa3 == 'GLU':
-                    acidic_coords_sidechain[rn] = coord
+                elif atom_name == 'CB':
+                    coords_cb[rn] = coord
             except Exception:
                 continue
         elif in_atom and line.startswith('#'):
             break
 
     lysine_positions = [pos for pos, aa in seq.items() if aa == 'K']
-    acidic_positions = sorted(set(acidic_coords_sidechain.keys()) | set(acidic_coords_ca.keys()))
+    acidic_positions = sorted(acidic_coords_ca.keys())
+
+    # For glycines (no CB), use CA as fallback
+    for rn in coords_ca:
+        if rn not in coords_cb:
+            coords_cb[rn] = coords_ca[rn]
 
     return {
         'plddt': plddt,
         'sequence': seq,
         'coords_ca': coords_ca,
-        'coords_nz': coords_nz,
-        'acidic_coords_sidechain': acidic_coords_sidechain,  # CG/CD for structured
-        'acidic_coords_ca': acidic_coords_ca,  # CA for flexible
+        'coords_cb': coords_cb,
+        'acidic_coords_ca': acidic_coords_ca,
         'acidic_positions': acidic_positions,
         'lysine_positions': lysine_positions
     }
 
 
+def calculate_exposure(struct: dict, pos: int) -> bool:
+    """Determine if a residue is surface-exposed using neighbor counting."""
+    coords_cb = struct.get('coords_cb', {})
+    if pos not in coords_cb:
+        return False
+
+    target_cb = coords_cb[pos]
+    neighbor_count = 0
+
+    for other_pos, other_cb in coords_cb.items():
+        if other_pos == pos:
+            continue
+        d = calc_distance(target_cb, other_cb)
+        if d <= EXPOSURE_DISTANCE_THRESHOLD:
+            neighbor_count += 1
+
+    return neighbor_count < EXPOSURE_NEIGHBOR_THRESHOLD
+
+
 def analyze_lysine(struct: dict, pos: int) -> dict:
     """Analyze a lysine residue (same logic as SUMO site analysis).
 
-    Distance calculation depends on flexibility of BOTH residues:
-    - If EITHER lysine OR acidic has pLDDT < threshold: use Cα-Cα distance
-    - If BOTH lysine AND acidic have pLDDT >= threshold: use NZ-CG/CD distance
+    Uses Cα-Cα distance for all calculations with min/max thresholds.
     """
     res = {
         'position': pos,
         'plddt_site': None,
         'plddt_window_avg': None,
         'aa_m2': None, 'aa_m1': None, 'aa_p1': None, 'aa_p2': None,
-        'n_acidic_within_threshold': 0,
         'flexible': None, 'structured': None,
         'forward_consensus': None, 'inverse_consensus': None,
-        'acidic_in_flank': None, 'acidic_in_space': None,
-        'any_acidic_within_threshold': None, 'Category': None  # Use uppercase to match sites
+        'any_acidic_within_threshold': None,
+        'exposed_acidic_within_threshold': None,
+        'Category': None  # Use uppercase to match sites
     }
 
     if not struct or pos not in struct['plddt']:
@@ -207,13 +224,10 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
     plddt = struct['plddt']
     seq = struct['sequence']
     coords_ca = struct['coords_ca']
-    coords_nz = struct['coords_nz']
-    acidic_coords_sidechain = struct['acidic_coords_sidechain']
     acidic_coords_ca = struct['acidic_coords_ca']
     acidic_positions = struct['acidic_positions']
 
     res['plddt_site'] = plddt.get(pos)
-    lys_plddt = plddt.get(pos, 0)
 
     half_window = PLDDT_WINDOW_LENGTH // 2
     window_vals = [plddt[i] for i in range(pos - half_window, pos + half_window + 1) if i in plddt]
@@ -224,76 +238,54 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
     res['aa_p1'] = seq.get(pos + 1)
     res['aa_p2'] = seq.get(pos + 2)
 
-    # Determine flexibility based on window average (for category classification)
+    # Determine flexibility based on window average
     if res['plddt_window_avg'] is not None:
         if res['plddt_window_avg'] < PLDDT_THRESHOLD:
             res['flexible'] = 'Yes'
         else:
             res['structured'] = 'Yes'
 
-    # Calculate distances - method depends on BOTH lysine AND acidic pLDDT
+    # Calculate Cα-Cα distances to all acidic residues
     lys_ca = coords_ca.get(pos)
-    lys_nz = coords_nz.get(pos)
 
-    if acidic_positions and (lys_ca or lys_nz):
-        min_not_flank, n_within = float('inf'), 0
+    if acidic_positions and lys_ca:
+        has_any_acidic = False
+        has_exposed_acidic = False
 
         for ac_pos in acidic_positions:
-            ac_plddt = plddt.get(ac_pos, 0)
-            rel_pos = ac_pos - pos
+            if ac_pos not in acidic_coords_ca:
+                continue
 
-            # Use Cα-Cα if EITHER residue is flexible (pLDDT < threshold)
-            # Use NZ-CG/CD only if BOTH are structured (pLDDT >= threshold)
-            if lys_plddt < PLDDT_THRESHOLD or ac_plddt < PLDDT_THRESHOLD:
-                # At least one is flexible - use Cα-Cα
-                if lys_ca is None or ac_pos not in acidic_coords_ca:
-                    continue
-                d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
-                distance_threshold = DISTANCE_THRESHOLD_FLEXIBLE
-            else:
-                # Both are structured - use NZ-CG/CD
-                if lys_nz is None or ac_pos not in acidic_coords_sidechain:
-                    continue
-                d = calc_distance(lys_nz, acidic_coords_sidechain[ac_pos])
-                distance_threshold = DISTANCE_THRESHOLD_STRUCTURED
+            d = calc_distance(lys_ca, acidic_coords_ca[ac_pos])
 
-            if d <= distance_threshold:
-                n_within += 1
+            # Check if within threshold range (min <= d <= max)
+            if DISTANCE_THRESHOLD_MIN <= d <= DISTANCE_THRESHOLD_MAX:
+                has_any_acidic = True
+                if calculate_exposure(struct, ac_pos):
+                    has_exposed_acidic = True
 
-            if rel_pos != -2 and rel_pos != 2:
-                if d < min_not_flank:
-                    min_not_flank = d
-
-        res['n_acidic_within_threshold'] = n_within
-
-        # For acidic_in_space, use appropriate threshold based on lysine flexibility
-        space_threshold = DISTANCE_THRESHOLD_FLEXIBLE if res['flexible'] == 'Yes' else DISTANCE_THRESHOLD_STRUCTURED
-        if min_not_flank <= space_threshold:
-            res['acidic_in_space'] = 'Yes'
-
-        if n_within > 0:
+        if has_any_acidic:
             res['any_acidic_within_threshold'] = 'Yes'
+        if has_exposed_acidic:
+            res['exposed_acidic_within_threshold'] = 'Yes'
 
     res['forward_consensus'] = 'Yes' if res['aa_m1'] in HYDROPHOBIC_RESIDUES and res['aa_p2'] in ACIDIC_RESIDUES else None
     res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
 
-    if res['aa_m2'] in ACIDIC_RESIDUES or res['aa_p2'] in ACIDIC_RESIDUES:
-        res['acidic_in_flank'] = 'Yes'
-
     is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
-    is_flank_acidic = (res['acidic_in_flank'] == 'Yes')
     has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
+    has_exposed_acidic = (res['exposed_acidic_within_threshold'] == 'Yes')
 
     prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
 
     if is_consensus:
         suffix = "_consensus"
-    elif is_flank_acidic:
-        suffix = "_flankacidic"
+    elif has_exposed_acidic:
+        suffix = "_exposed_acidic"
     elif has_any_acidic:
-        suffix = "_space"
+        suffix = "_buried_acidic"
     else:
-        suffix = "_none"
+        suffix = "_no_acidic"
 
     res['Category'] = prefix + suffix  # Use uppercase to match sites DataFrame
     return res
@@ -337,8 +329,8 @@ def get_all_lysines_analysis(uniprot_ids: list) -> pd.DataFrame:
 def count_categories(df: pd.DataFrame) -> dict:
     """Count sites in each category."""
     categories = [
-        'Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
-        'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none'
+        'Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic',
+        'Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic'
     ]
 
     # Handle both uppercase (from core output) and lowercase (from control analysis) column names
@@ -361,11 +353,11 @@ def calculate_rates(counts: dict) -> dict:
     for prefix in ['Flexible', 'Structured']:
         total = counts[f'Total_{prefix}']
         if total > 0:
-            for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+            for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
                 key = f'{prefix}_{suffix}'
                 rates[f'{key}_rate'] = counts[key] / total
         else:
-            for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+            for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
                 key = f'{prefix}_{suffix}'
                 rates[f'{key}_rate'] = None
     return rates
@@ -388,7 +380,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     # Show counts
     results.append({'Metric': '', 'Value': ''})
     results.append({'Metric': 'Category', 'Value': 'Flexible | Structured'})
-    for suffix in ['consensus', 'flankacidic', 'space', 'none']:
+    for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
         f_count = counts[f'Flexible_{suffix}']
         s_count = counts[f'Structured_{suffix}']
         f_rate = rates.get(f'Flexible_{suffix}_rate', 0) or 0
@@ -401,8 +393,8 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     results.append({'Metric': 'TOTAL', 'Value': f"{counts['Total_Flexible']} | {counts['Total_Structured']}"})
 
     # Chi-square test
-    flex_counts = [counts[f'Flexible_{s}'] for s in ['consensus', 'flankacidic', 'space', 'none']]
-    struct_counts = [counts[f'Structured_{s}'] for s in ['consensus', 'flankacidic', 'space', 'none']]
+    flex_counts = [counts[f'Flexible_{s}'] for s in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']]
+    struct_counts = [counts[f'Structured_{s}'] for s in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']]
 
     if sum(flex_counts) > 0 and sum(struct_counts) > 0:
         results.append({'Metric': '', 'Value': ''})
@@ -416,7 +408,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
         # Fisher exact for each category (Flexible vs Structured)
         results.append({'Metric': '', 'Value': ''})
         results.append({'Metric': '--- Fisher exact tests (each category) ---', 'Value': ''})
-        for i, suffix in enumerate(['consensus', 'flankacidic', 'space', 'none']):
+        for i, suffix in enumerate(['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']):
             f_yes, f_no = flex_counts[i], sum(flex_counts) - flex_counts[i]
             s_yes, s_no = struct_counts[i], sum(struct_counts) - struct_counts[i]
             try:
@@ -448,8 +440,8 @@ def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -
     results.append({'Metric': '--- Overall category comparison ---', 'Value': ''})
     results.append({'Metric': 'Category', 'Value': 'Sites | Control'})
 
-    for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
-                'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+    for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic',
+                'Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
         s_count = sites_counts[cat]
         c_count = control_counts[cat]
         s_pct = 100 * s_count / sites_counts['Total'] if sites_counts['Total'] > 0 else 0
@@ -458,10 +450,10 @@ def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -
 
     # Chi-square comparing overall distributions
     results.append({'Metric': '', 'Value': ''})
-    sites_all = [sites_counts[c] for c in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
-                                            'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']]
-    control_all = [control_counts[c] for c in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none',
-                                                'Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']]
+    sites_all = [sites_counts[c] for c in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic',
+                                            'Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']]
+    control_all = [control_counts[c] for c in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic',
+                                                'Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']]
 
     if sum(sites_all) > 0 and sum(control_all) > 0:
         try:
@@ -476,44 +468,26 @@ def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -
     results.append({'Metric': '--- Feature enrichment in SUMO sites vs control ---', 'Value': ''})
 
     features = [
-        ('Flexible', lambda df: df['Flexible'] == 'Yes'),
-        ('Consensus', lambda df: (df['Forward_consensus'] == 'Yes') | (df['Inverse_consensus'] == 'Yes')),
-        ('Acidic_in_-2/+2', lambda df: df['Acidic_in_-2/+2'] == 'Yes'),
-        ('Acidic_in_space', lambda df: df['Acidic_in_space'] == 'Yes'),
-        ('Any_acidic', lambda df: df['Any_acidic_within_threshold'] == 'Yes'),
+        ('Flexible', 'Flexible', 'flexible'),
+        ('Consensus', None, None),  # Special handling
+        ('Any_acidic', 'Any_acidic_within_threshold', 'any_acidic_within_threshold'),
+        ('Exposed_acidic', 'Exposed_acidic_within_threshold', 'exposed_acidic_within_threshold'),
     ]
 
-    for name, condition in features:
+    for name, s_col_hint, c_col_hint in features:
         try:
-            # Handle different column names between sites and control
-            # Sites use uppercase (from core output), control uses lowercase (from analyze_lysine)
-            if name == 'Acidic_in_-2/+2':
-                s_col = 'Acidic_in_-2/+2' if 'Acidic_in_-2/+2' in sites_df.columns else 'acidic_in_flank'
-                c_col = 'Acidic_in_-2/+2' if 'Acidic_in_-2/+2' in control_df.columns else 'acidic_in_flank'
-                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
-                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
-            elif name == 'Acidic_in_space':
-                s_col = 'Acidic_in_space' if 'Acidic_in_space' in sites_df.columns else 'acidic_in_space'
-                c_col = 'Acidic_in_space' if 'Acidic_in_space' in control_df.columns else 'acidic_in_space'
-                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
-                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
-            elif name == 'Any_acidic':
-                s_col = 'Any_acidic_within_threshold' if 'Any_acidic_within_threshold' in sites_df.columns else 'any_acidic_within_threshold'
-                c_col = 'Any_acidic_within_threshold' if 'Any_acidic_within_threshold' in control_df.columns else 'any_acidic_within_threshold'
-                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
-                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
-            elif name == 'Flexible':
-                s_col = 'Flexible' if 'Flexible' in sites_df.columns else 'flexible'
-                c_col = 'Flexible' if 'Flexible' in control_df.columns else 'flexible'
-                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
-                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
-            elif name == 'Consensus':
+            if name == 'Consensus':
                 s_fwd = 'Forward_consensus' if 'Forward_consensus' in sites_df.columns else 'forward_consensus'
                 s_inv = 'Inverse_consensus' if 'Inverse_consensus' in sites_df.columns else 'inverse_consensus'
                 c_fwd = 'Forward_consensus' if 'Forward_consensus' in control_df.columns else 'forward_consensus'
                 c_inv = 'Inverse_consensus' if 'Inverse_consensus' in control_df.columns else 'inverse_consensus'
                 s_yes = ((sites_df[s_fwd] == 'Yes') | (sites_df[s_inv] == 'Yes')).sum()
                 c_yes = ((control_df[c_fwd] == 'Yes') | (control_df[c_inv] == 'Yes')).sum()
+            else:
+                s_col = s_col_hint if s_col_hint in sites_df.columns else c_col_hint
+                c_col = s_col_hint if s_col_hint in control_df.columns else c_col_hint
+                s_yes = (sites_df[s_col] == 'Yes').sum() if s_col in sites_df.columns else 0
+                c_yes = (control_df[c_col] == 'Yes').sum() if c_col in control_df.columns else 0
 
             s_no = len(sites_df) - s_yes
             c_no = len(control_df) - c_yes
@@ -569,9 +543,8 @@ def analyze_score_predictors(df: pd.DataFrame) -> list:
         ('Forward_consensus', valid['Forward_consensus'] == 'Yes'),
         ('Inverse_consensus', valid['Inverse_consensus'] == 'Yes'),
         ('Any_consensus', (valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes')),
-        ('Acidic_in_-2/+2', valid['Acidic_in_-2/+2'] == 'Yes'),
-        ('Acidic_in_space', valid['Acidic_in_space'] == 'Yes'),
         ('Any_acidic_within_threshold', valid['Any_acidic_within_threshold'] == 'Yes'),
+        ('Exposed_acidic_within_threshold', valid['Exposed_acidic_within_threshold'] == 'Yes'),
     ]
 
     results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
@@ -607,13 +580,20 @@ def analyze_score_predictors(df: pd.DataFrame) -> list:
                 'Value': f'{rate_high:.1%} | {rate_low:.1%} | N/A | N/A'
             })
 
-    # Multiple acidics as predictor
+    # Multiple acidics as predictor (count from Acidics_within_threshold list)
     results.append({'Metric': '', 'Value': ''})
     results.append({'Metric': '--- N_acidic_within_threshold as predictor ---', 'Value': ''})
 
-    n_acidic_col = 'N_acidic_within_threshold'
-    if n_acidic_col in valid.columns:
-        valid['n_acidic'] = pd.to_numeric(valid[n_acidic_col], errors='coerce').fillna(0).astype(int)
+    acidics_col = 'Acidics_within_threshold'
+    if acidics_col in valid.columns:
+        # Count acidics from comma-separated list
+        def count_acidics(val):
+            if pd.isna(val) or val == '':
+                return 0
+            return len(str(val).split(','))
+
+        valid = valid.copy()
+        valid['n_acidic'] = valid[acidics_col].apply(count_acidics)
 
         # Correlation with score
         rho, p = stats.spearmanr(valid['n_acidic'], valid[score_col])
@@ -716,9 +696,8 @@ def analyze_score_predictors_by_flexibility(df: pd.DataFrame) -> dict:
             ('Forward_consensus', subset['Forward_consensus'] == 'Yes'),
             ('Inverse_consensus', subset['Inverse_consensus'] == 'Yes'),
             ('Any_consensus', (subset['Forward_consensus'] == 'Yes') | (subset['Inverse_consensus'] == 'Yes')),
-            ('Acidic_in_-2/+2', subset['Acidic_in_-2/+2'] == 'Yes'),
-            ('Acidic_in_space', subset['Acidic_in_space'] == 'Yes'),
             ('Any_acidic_within_threshold', subset['Any_acidic_within_threshold'] == 'Yes'),
+            ('Exposed_acidic_within_threshold', subset['Exposed_acidic_within_threshold'] == 'Yes'),
         ]
 
         results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
@@ -754,13 +733,20 @@ def analyze_score_predictors_by_flexibility(df: pd.DataFrame) -> dict:
                     'Value': f'{rate_high:.1%} | {rate_low:.1%} | N/A | N/A'
                 })
 
-        # N_acidic analysis
+        # N_acidic analysis (count from Acidics_within_threshold list)
         results.append({'Metric': '', 'Value': ''})
         results.append({'Metric': '--- N_acidic_within_threshold as predictor ---', 'Value': ''})
 
-        n_acidic_col = 'N_acidic_within_threshold'
-        if n_acidic_col in subset.columns:
-            subset['n_acidic'] = pd.to_numeric(subset[n_acidic_col], errors='coerce').fillna(0).astype(int)
+        acidics_col = 'Acidics_within_threshold'
+        if acidics_col in subset.columns:
+            # Count acidics from comma-separated list
+            def count_acidics(val):
+                if pd.isna(val) or val == '':
+                    return 0
+                return len(str(val).split(','))
+
+            subset = subset.copy()
+            subset['n_acidic'] = subset[acidics_col].apply(count_acidics)
 
             # Correlation with score
             if len(subset) >= 10:
@@ -826,12 +812,12 @@ def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -
     rates = calculate_rates(counts)
 
     results.append({'Metric': '--- SUMO Sites Category Counts ---', 'Value': ''})
-    for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+    for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
         rate = rates.get(f'{cat}_rate', 0) or 0
         results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Flexible)'})
 
     results.append({'Metric': '', 'Value': ''})
-    for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+    for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
         rate = rates.get(f'{cat}_rate', 0) or 0
         results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Structured)'})
 
@@ -860,12 +846,12 @@ def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -
         control_rates = calculate_rates(control_counts)
 
         results.append({'Metric': '--- Control (All Lysines) Category Counts ---', 'Value': ''})
-        for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+        for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
             rate = control_rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Flexible)'})
 
         results.append({'Metric': '', 'Value': ''})
-        for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+        for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
             rate = control_rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Structured)'})
 
@@ -914,12 +900,12 @@ def perform_stratified_analysis(df: pd.DataFrame, score_col: str = 'Score (SUMO 
         rates = calculate_rates(counts)
 
         results.append({'Metric': '--- Category Counts ---', 'Value': ''})
-        for cat in ['Flexible_consensus', 'Flexible_flankacidic', 'Flexible_space', 'Flexible_none']:
+        for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
             rate = rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 
         results.append({'Metric': '', 'Value': ''})
-        for cat in ['Structured_consensus', 'Structured_flankacidic', 'Structured_space', 'Structured_none']:
+        for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
             rate = rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 
@@ -940,8 +926,8 @@ def analyze_file(input_file: str, output_file: str = None):
     print(f"\n{'=' * 60}\nSUMO Site Analyzer - Statistical Analysis\n{'=' * 60}\n")
     print(f"Parameters:")
     print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
-    print(f"  Distance threshold (flexible, Cα-Cα): {DISTANCE_THRESHOLD_FLEXIBLE} Å")
-    print(f"  Distance threshold (structured, NZ-CG/CD): {DISTANCE_THRESHOLD_STRUCTURED} Å")
+    print(f"  Distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Exposure: {EXPOSURE_DISTANCE_THRESHOLD} Å radius, <{EXPOSURE_NEIGHBOR_THRESHOLD} neighbors = exposed")
     print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
     print()
 
@@ -1013,8 +999,10 @@ def main():
         print(__doc__)
         print("\nConfigurable parameters (must match sumo_site_core.py):")
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
-        print(f"  DISTANCE_THRESHOLD_FLEXIBLE = {DISTANCE_THRESHOLD_FLEXIBLE} (Cα-Cα)")
-        print(f"  DISTANCE_THRESHOLD_STRUCTURED = {DISTANCE_THRESHOLD_STRUCTURED} (NZ-CG/CD)")
+        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα)")
+        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα)")
+        print(f"  EXPOSURE_DISTANCE_THRESHOLD = {EXPOSURE_DISTANCE_THRESHOLD} Å")
+        print(f"  EXPOSURE_NEIGHBOR_THRESHOLD = {EXPOSURE_NEIGHBOR_THRESHOLD}")
         print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
         print(f"  SCORE_HIGH_THRESHOLD = {SCORE_HIGH_THRESHOLD}")
         print(f"  SCORE_MEDIUM_THRESHOLD = {SCORE_MEDIUM_THRESHOLD}")
