@@ -503,6 +503,10 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
         'exposed_acidic_within_threshold': None,
         'acidic_in_pm2': None,                 # Acidic within +/-2 positions
         'exposed_acidic_in_pm2': None,         # Exposed acidic within +/-2 positions
+        # Extended acidics (positions +3 to +10 and -3 to -10)
+        'extended_acidics_downstream': 0,      # Count of acidics in +3 to +10
+        'extended_acidics_upstream': 0,        # Count of acidics in -10 to -3
+        'extended_acidics_total': 0,           # Sum of upstream + downstream
         # Hydrophobic analysis
         'hydrophobics_within_threshold': None, # List: "V123(exp),L456"
         'hydrophobic_distances_angstroms': None,  # List: "3.2,4.1"
@@ -636,6 +640,28 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
                 res['acidic_in_pm2'] = 'Yes'
             if has_exposed_in_pm2:
                 res['exposed_acidic_in_pm2'] = 'Yes'
+
+    # Calculate extended acidics (based on sequence position, not distance threshold)
+    # Downstream: positions +3 to +10 relative to lysine
+    # Upstream: positions -10 to -3 relative to lysine
+    extended_downstream = 0
+    extended_upstream = 0
+
+    for offset in range(3, 11):  # +3 to +10
+        check_pos = pos + offset
+        aa_at_pos = seq.get(check_pos)
+        if aa_at_pos in ACIDIC_RESIDUES:
+            extended_downstream += 1
+
+    for offset in range(-10, -2):  # -10 to -3
+        check_pos = pos + offset
+        aa_at_pos = seq.get(check_pos)
+        if aa_at_pos in ACIDIC_RESIDUES:
+            extended_upstream += 1
+
+    res['extended_acidics_downstream'] = extended_downstream
+    res['extended_acidics_upstream'] = extended_upstream
+    res['extended_acidics_total'] = extended_downstream + extended_upstream
 
     # Calculate Cα-Cα distances to all hydrophobic residues
     hydrophobic_coords_ca = struct.get('hydrophobic_coords_ca', {})
@@ -826,6 +852,22 @@ def process_file(input_file: str, output_file: str = None):
     res_df['sliding_frac_struct_with_acidic'] = calc_conditional_sliding_fraction(
         is_structured == 1, has_any_acidic == 1)
 
+    # Sliding window averages for extended acidics
+    def calc_sliding_mean(series):
+        """Calculate sliding window mean for a numeric series."""
+        n = len(series)
+        means = []
+        for i in range(n):
+            start = max(0, i - half_window)
+            end = min(n, i + half_window + 1)
+            window = series.iloc[start:end]
+            means.append(window.mean() if len(window) > 0 else None)
+        return means
+
+    res_df['sliding_avg_ext_acidics_downstream'] = calc_sliding_mean(res_df['extended_acidics_downstream'])
+    res_df['sliding_avg_ext_acidics_upstream'] = calc_sliding_mean(res_df['extended_acidics_upstream'])
+    res_df['sliding_avg_ext_acidics_total'] = calc_sliding_mean(res_df['extended_acidics_total'])
+
     # Column mapping to final names
     cols_map = {
         'used_id': 'UniProt_ID_used',
@@ -845,6 +887,10 @@ def process_file(input_file: str, output_file: str = None):
         'exposed_acidic_within_threshold': 'Exposed_acidic_within_threshold',
         'acidic_in_pm2': 'Acidic_in_pm2',
         'exposed_acidic_in_pm2': 'Exposed_acidic_in_pm2',
+        # Extended acidics columns
+        'extended_acidics_downstream': 'Extended_acidics_downstream',
+        'extended_acidics_upstream': 'Extended_acidics_upstream',
+        'extended_acidics_total': 'Extended_acidics_total',
         # Hydrophobic columns
         'hydrophobics_within_threshold': 'Hydrophobics_within_threshold',
         'hydrophobic_distances_angstroms': 'Hydrophobic_distances_Angstroms',
@@ -857,12 +903,16 @@ def process_file(input_file: str, output_file: str = None):
         'forward_consensus': 'Forward_consensus',
         'inverse_consensus': 'Inverse_consensus',
         'category': 'Category',
+        # Sliding window columns
         'sliding_frac_flexible': 'Sliding_frac_Flexible',
         'sliding_frac_consensus': 'Sliding_frac_Consensus',
         'sliding_frac_any_acidic': 'Sliding_frac_Any_acidic',
         'sliding_frac_exposed_acidic': 'Sliding_frac_Exposed_acidic',
         'sliding_frac_flex_with_acidic': 'Sliding_frac_Flex_with_acidic',
-        'sliding_frac_struct_with_acidic': 'Sliding_frac_Struct_with_acidic'
+        'sliding_frac_struct_with_acidic': 'Sliding_frac_Struct_with_acidic',
+        'sliding_avg_ext_acidics_downstream': 'Sliding_avg_Ext_acidics_downstream',
+        'sliding_avg_ext_acidics_upstream': 'Sliding_avg_Ext_acidics_upstream',
+        'sliding_avg_ext_acidics_total': 'Sliding_avg_Ext_acidics_total'
     }
     res_df = res_df.rename(columns=cols_map)
 
@@ -885,6 +935,10 @@ def process_file(input_file: str, output_file: str = None):
         'Exposed_acidic_within_threshold',
         'Acidic_in_pm2',
         'Exposed_acidic_in_pm2',
+        # Extended acidics columns
+        'Extended_acidics_downstream',
+        'Extended_acidics_upstream',
+        'Extended_acidics_total',
         # Hydrophobic columns
         'Hydrophobics_within_threshold',
         'Hydrophobic_distances_Angstroms',
@@ -897,12 +951,16 @@ def process_file(input_file: str, output_file: str = None):
         'Forward_consensus',
         'Inverse_consensus',
         'Category',
+        # Sliding window columns
         'Sliding_frac_Flexible',
         'Sliding_frac_Consensus',
         'Sliding_frac_Any_acidic',
         'Sliding_frac_Exposed_acidic',
         'Sliding_frac_Flex_with_acidic',
-        'Sliding_frac_Struct_with_acidic'
+        'Sliding_frac_Struct_with_acidic',
+        'Sliding_avg_Ext_acidics_downstream',
+        'Sliding_avg_Ext_acidics_upstream',
+        'Sliding_avg_Ext_acidics_total'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 
