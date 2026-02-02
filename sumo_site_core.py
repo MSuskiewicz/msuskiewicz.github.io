@@ -510,6 +510,7 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
         # Hydrophobic analysis
         'hydrophobics_within_threshold': None, # List: "V123(exp),L456"
         'hydrophobic_distances_angstroms': None,  # List: "3.2,4.1"
+        'hydrophobic_distances_positions': None,  # List: "-3(exp),+5"
         'any_hydrophobic_within_threshold': None,
         'exposed_hydrophobic_within_threshold': None,
         # Structure info
@@ -698,21 +699,28 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
         if hydrophobics_info:
             hp_labels = []
             hp_distance_labels = []
+            hp_position_labels = []
             has_exposed_hp = False
 
             for hp_pos_af, hp_pos_report, dist, is_exposed in hydrophobics_info:
                 aa = seq.get(hp_pos_af, '?')
+                # Calculate relative position from lysine
+                rel_pos = hp_pos_report - site_pos_for_rel
+                rel_pos_str = f"+{rel_pos}" if rel_pos > 0 else str(rel_pos)
 
                 if is_exposed:
                     hp_labels.append(f"{aa}{hp_pos_report}(exp)")
                     hp_distance_labels.append(f"{dist:.1f}(exp)")
+                    hp_position_labels.append(f"{rel_pos_str}(exp)")
                     has_exposed_hp = True
                 else:
                     hp_labels.append(f"{aa}{hp_pos_report}")
                     hp_distance_labels.append(f"{dist:.1f}")
+                    hp_position_labels.append(rel_pos_str)
 
             res['hydrophobics_within_threshold'] = ','.join(hp_labels)
             res['hydrophobic_distances_angstroms'] = ','.join(hp_distance_labels)
+            res['hydrophobic_distances_positions'] = ','.join(hp_position_labels)
             res['any_hydrophobic_within_threshold'] = 'Yes'
 
             if has_exposed_hp:
@@ -868,6 +876,10 @@ def process_file(input_file: str, output_file: str = None):
     res_df['sliding_avg_ext_acidics_upstream'] = calc_sliding_mean(res_df['extended_acidics_upstream'])
     res_df['sliding_avg_ext_acidics_total'] = calc_sliding_mean(res_df['extended_acidics_total'])
 
+    # Sliding window fraction for hydrophobic
+    has_any_hydrophobic = (res_df['any_hydrophobic_within_threshold'] == 'Yes').astype(int)
+    res_df['sliding_frac_any_hydrophobic'] = calc_sliding_fraction(has_any_hydrophobic)
+
     # Column mapping to final names
     cols_map = {
         'used_id': 'UniProt_ID_used',
@@ -894,6 +906,7 @@ def process_file(input_file: str, output_file: str = None):
         # Hydrophobic columns
         'hydrophobics_within_threshold': 'Hydrophobics_within_threshold',
         'hydrophobic_distances_angstroms': 'Hydrophobic_distances_Angstroms',
+        'hydrophobic_distances_positions': 'Hydrophobic_distances_positions',
         'any_hydrophobic_within_threshold': 'Any_hydrophobic_within_threshold',
         'exposed_hydrophobic_within_threshold': 'Exposed_hydrophobic_within_threshold',
         # Structure columns
@@ -912,7 +925,8 @@ def process_file(input_file: str, output_file: str = None):
         'sliding_frac_struct_with_acidic': 'Sliding_frac_Struct_with_acidic',
         'sliding_avg_ext_acidics_downstream': 'Sliding_avg_Ext_acidics_downstream',
         'sliding_avg_ext_acidics_upstream': 'Sliding_avg_Ext_acidics_upstream',
-        'sliding_avg_ext_acidics_total': 'Sliding_avg_Ext_acidics_total'
+        'sliding_avg_ext_acidics_total': 'Sliding_avg_Ext_acidics_total',
+        'sliding_frac_any_hydrophobic': 'Sliding_frac_Any_hydrophobic'
     }
     res_df = res_df.rename(columns=cols_map)
 
@@ -942,6 +956,7 @@ def process_file(input_file: str, output_file: str = None):
         # Hydrophobic columns
         'Hydrophobics_within_threshold',
         'Hydrophobic_distances_Angstroms',
+        'Hydrophobic_distances_positions',
         'Any_hydrophobic_within_threshold',
         'Exposed_hydrophobic_within_threshold',
         # Structure columns
@@ -960,7 +975,8 @@ def process_file(input_file: str, output_file: str = None):
         'Sliding_frac_Struct_with_acidic',
         'Sliding_avg_Ext_acidics_downstream',
         'Sliding_avg_Ext_acidics_upstream',
-        'Sliding_avg_Ext_acidics_total'
+        'Sliding_avg_Ext_acidics_total',
+        'Sliding_frac_Any_hydrophobic'
     ]
     res_df = res_df[[c for c in ordered_cols if c in res_df.columns]]
 
