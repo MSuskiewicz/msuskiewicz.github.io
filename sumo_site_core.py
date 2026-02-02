@@ -26,9 +26,13 @@ from threading import Lock
 PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
 PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
 
-# Distance thresholds (Cα-Cα based, minimum and maximum)
+# Distance thresholds for ACIDIC residues (Cα-Cα based, minimum and maximum)
 DISTANCE_THRESHOLD_MIN = 4.9    # Minimum Cα-Cα distance in Angstroms
 DISTANCE_THRESHOLD_MAX = 8.0    # Maximum Cα-Cα distance in Angstroms
+
+# Distance thresholds for HYDROPHOBIC residues (Cα-Cα based)
+HYDROPHOBIC_DISTANCE_MIN = 3.0  # Minimum Cα-Cα distance in Angstroms
+HYDROPHOBIC_DISTANCE_MAX = 4.5  # Maximum Cα-Cα distance in Angstroms
 
 # Surface exposure parameters (neighbor counting method)
 EXPOSURE_DISTANCE_THRESHOLD = 10.0  # Angstroms - radius for counting CB neighbors
@@ -260,9 +264,12 @@ def parse_cif(content: str) -> dict:
     - CB coordinates for all residues (for exposure calculation via neighbor counting)
     - pLDDT values from B-factor column
     - Secondary structure from _struct_conf category (helix/strand/coil)
+    - Acidic residue (D, E) coordinates
+    - Hydrophobic residue coordinates
     """
     plddt, seq, coords_ca, coords_cb = {}, {}, {}, {}
     acidic_coords_ca = {}  # CA for acidic residues
+    hydrophobic_coords_ca = {}  # CA for hydrophobic residues
     in_atom, headers, idx = False, [], {}
 
     # Secondary structure storage
@@ -328,6 +335,9 @@ def parse_cif(content: str) -> dict:
                     # Store CA for acidic residues
                     if aa3 in ('ASP', 'GLU'):
                         acidic_coords_ca[rn] = coord
+                    # Store CA for hydrophobic residues
+                    if aa in HYDROPHOBIC_RESIDUES:
+                        hydrophobic_coords_ca[rn] = coord
                 elif atom_name == 'CB':
                     coords_cb[rn] = coord
             except Exception:
@@ -337,6 +347,7 @@ def parse_cif(content: str) -> dict:
 
     seq_str = ''.join(seq.get(i, 'X') for i in range(1, max(seq.keys(), default=0) + 1))
     acidic_positions = sorted(acidic_coords_ca.keys())
+    hydrophobic_positions = sorted(hydrophobic_coords_ca.keys())
 
     # For glycines (no CB), use CA as fallback for exposure calculation
     for rn in coords_ca:
@@ -351,6 +362,8 @@ def parse_cif(content: str) -> dict:
         'coords_cb': coords_cb,  # For exposure calculation
         'acidic_coords_ca': acidic_coords_ca,
         'acidic_positions': acidic_positions,
+        'hydrophobic_coords_ca': hydrophobic_coords_ca,
+        'hydrophobic_positions': hydrophobic_positions,
         'secondary_structure': sec_struct  # helix/strand/coil
     }
 
@@ -482,16 +495,25 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
         'aa_site': None,
         'aa_p1': None,
         'aa_p2': None,
+        # Acidic analysis
         'acidics_within_threshold': None,      # List: "D123(exp),E456"
         'distances_angstroms': None,           # List: "5.2,6.8"
         'distances_positions': None,           # List: "-5(exp),+20"
+        'any_acidic_within_threshold': None,
+        'exposed_acidic_within_threshold': None,
+        'acidic_in_pm2': None,                 # Acidic within +/-2 positions
+        'exposed_acidic_in_pm2': None,         # Exposed acidic within +/-2 positions
+        # Hydrophobic analysis
+        'hydrophobics_within_threshold': None, # List: "V123(exp),L456"
+        'hydrophobic_distances_angstroms': None,  # List: "3.2,4.1"
+        'any_hydrophobic_within_threshold': None,
+        'exposed_hydrophobic_within_threshold': None,
+        # Structure info
         'flexible': None,
         'structured': None,
         'secondary_structure': None,           # helix/strand/coil
         'forward_consensus': None,
         'inverse_consensus': None,
-        'any_acidic_within_threshold': None,
-        'exposed_acidic_within_threshold': None,
         'category': None
     }
 
@@ -578,12 +600,20 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
             position_labels = []
 
             has_exposed = False
+            has_in_pm2 = False           # Any acidic within +/-2 positions
+            has_exposed_in_pm2 = False   # Exposed acidic within +/-2 positions
 
             for ac_pos_af, ac_pos_report, dist, is_exposed in acidics_info:
                 aa = seq.get(ac_pos_af, '?')
                 # Use reported position for relative calculation
                 rel_pos = ac_pos_report - site_pos_for_rel
                 rel_pos_str = f"+{rel_pos}" if rel_pos > 0 else str(rel_pos)
+
+                # Check if within +/-2 positions
+                if -2 <= rel_pos <= 2:
+                    has_in_pm2 = True
+                    if is_exposed:
+                        has_exposed_in_pm2 = True
 
                 if is_exposed:
                     acidic_labels.append(f"{aa}{ac_pos_report}(exp)")
@@ -602,6 +632,65 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
 
             if has_exposed:
                 res['exposed_acidic_within_threshold'] = 'Yes'
+            if has_in_pm2:
+                res['acidic_in_pm2'] = 'Yes'
+            if has_exposed_in_pm2:
+                res['exposed_acidic_in_pm2'] = 'Yes'
+
+    # Calculate Cα-Cα distances to all hydrophobic residues
+    hydrophobic_coords_ca = struct.get('hydrophobic_coords_ca', {})
+    hydrophobic_positions = struct.get('hydrophobic_positions', [])
+
+    if hydrophobic_positions and lys_ca:
+        # Collect all hydrophobics within the threshold range
+        hydrophobics_info = []
+
+        for hp_pos in hydrophobic_positions:
+            if hp_pos not in hydrophobic_coords_ca:
+                continue
+
+            d = calc_distance(lys_ca, hydrophobic_coords_ca[hp_pos])
+
+            # Check if within hydrophobic threshold range
+            if HYDROPHOBIC_DISTANCE_MIN <= d <= HYDROPHOBIC_DISTANCE_MAX:
+                is_exposed = calculate_exposure(struct, hp_pos)
+
+                # Map position back to original coordinates if needed
+                if original_seq and af_seq:
+                    mapped_hp_pos = map_position_by_residue(af_seq, original_seq, hp_pos)
+                    if mapped_hp_pos is None:
+                        continue
+                    hp_pos_for_report = mapped_hp_pos
+                else:
+                    hp_pos_for_report = hp_pos
+
+                hydrophobics_info.append((hp_pos, hp_pos_for_report, d, is_exposed))
+
+        # Sort by distance
+        hydrophobics_info.sort(key=lambda x: x[2])
+
+        if hydrophobics_info:
+            hp_labels = []
+            hp_distance_labels = []
+            has_exposed_hp = False
+
+            for hp_pos_af, hp_pos_report, dist, is_exposed in hydrophobics_info:
+                aa = seq.get(hp_pos_af, '?')
+
+                if is_exposed:
+                    hp_labels.append(f"{aa}{hp_pos_report}(exp)")
+                    hp_distance_labels.append(f"{dist:.1f}(exp)")
+                    has_exposed_hp = True
+                else:
+                    hp_labels.append(f"{aa}{hp_pos_report}")
+                    hp_distance_labels.append(f"{dist:.1f}")
+
+            res['hydrophobics_within_threshold'] = ','.join(hp_labels)
+            res['hydrophobic_distances_angstroms'] = ','.join(hp_distance_labels)
+            res['any_hydrophobic_within_threshold'] = 'Yes'
+
+            if has_exposed_hp:
+                res['exposed_hydrophobic_within_threshold'] = 'Yes'
 
     # Consensus motifs
     # Forward: ψKxE (hydrophobic at -1, acidic at +2)
@@ -639,7 +728,8 @@ def process_file(input_file: str, output_file: str = None):
     print(f"Parameters:")
     print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
     print(f"  pLDDT window length: {PLDDT_WINDOW_LENGTH}")
-    print(f"  Distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Acidic distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Hydrophobic distance threshold (Cα-Cα): {HYDROPHOBIC_DISTANCE_MIN} - {HYDROPHOBIC_DISTANCE_MAX} Å")
     print(f"  Exposure parameters: {EXPOSURE_DISTANCE_THRESHOLD} Å radius, <{EXPOSURE_NEIGHBOR_THRESHOLD} neighbors = exposed")
     print(f"  Sliding window length: {SLIDING_WINDOW_LENGTH}")
     print()
@@ -747,16 +837,25 @@ def process_file(input_file: str, output_file: str = None):
         'aa_site': 'AA_site',
         'aa_p1': 'AA_+1',
         'aa_p2': 'AA_+2',
+        # Acidic columns
         'acidics_within_threshold': 'Acidics_within_threshold',
         'distances_angstroms': 'Distances_Angstroms',
         'distances_positions': 'Distances_positions',
+        'any_acidic_within_threshold': 'Any_acidic_within_threshold',
+        'exposed_acidic_within_threshold': 'Exposed_acidic_within_threshold',
+        'acidic_in_pm2': 'Acidic_in_pm2',
+        'exposed_acidic_in_pm2': 'Exposed_acidic_in_pm2',
+        # Hydrophobic columns
+        'hydrophobics_within_threshold': 'Hydrophobics_within_threshold',
+        'hydrophobic_distances_angstroms': 'Hydrophobic_distances_Angstroms',
+        'any_hydrophobic_within_threshold': 'Any_hydrophobic_within_threshold',
+        'exposed_hydrophobic_within_threshold': 'Exposed_hydrophobic_within_threshold',
+        # Structure columns
         'flexible': 'Flexible',
         'structured': 'Structured',
         'secondary_structure': 'Secondary_structure',
         'forward_consensus': 'Forward_consensus',
         'inverse_consensus': 'Inverse_consensus',
-        'any_acidic_within_threshold': 'Any_acidic_within_threshold',
-        'exposed_acidic_within_threshold': 'Exposed_acidic_within_threshold',
         'category': 'Category',
         'sliding_frac_flexible': 'Sliding_frac_Flexible',
         'sliding_frac_consensus': 'Sliding_frac_Consensus',
@@ -778,16 +877,25 @@ def process_file(input_file: str, output_file: str = None):
         'AA_site',
         'AA_+1',
         'AA_+2',
+        # Acidic columns
         'Acidics_within_threshold',
         'Distances_Angstroms',
         'Distances_positions',
+        'Any_acidic_within_threshold',
+        'Exposed_acidic_within_threshold',
+        'Acidic_in_pm2',
+        'Exposed_acidic_in_pm2',
+        # Hydrophobic columns
+        'Hydrophobics_within_threshold',
+        'Hydrophobic_distances_Angstroms',
+        'Any_hydrophobic_within_threshold',
+        'Exposed_hydrophobic_within_threshold',
+        # Structure columns
         'Flexible',
         'Structured',
         'Secondary_structure',
         'Forward_consensus',
         'Inverse_consensus',
-        'Any_acidic_within_threshold',
-        'Exposed_acidic_within_threshold',
         'Category',
         'Sliding_frac_Flexible',
         'Sliding_frac_Consensus',
@@ -831,8 +939,10 @@ def main():
         print("\nConfigurable parameters (edit at top of script):")
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
         print(f"  PLDDT_WINDOW_LENGTH = {PLDDT_WINDOW_LENGTH}")
-        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα)")
-        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα)")
+        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα, acidic)")
+        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα, acidic)")
+        print(f"  HYDROPHOBIC_DISTANCE_MIN = {HYDROPHOBIC_DISTANCE_MIN} Å (Cα-Cα)")
+        print(f"  HYDROPHOBIC_DISTANCE_MAX = {HYDROPHOBIC_DISTANCE_MAX} Å (Cα-Cα)")
         print(f"  EXPOSURE_DISTANCE_THRESHOLD = {EXPOSURE_DISTANCE_THRESHOLD} Å")
         print(f"  EXPOSURE_NEIGHBOR_THRESHOLD = {EXPOSURE_NEIGHBOR_THRESHOLD}")
         print(f"  SLIDING_WINDOW_LENGTH = {SLIDING_WINDOW_LENGTH}")

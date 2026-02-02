@@ -34,9 +34,13 @@ import logging
 PLDDT_THRESHOLD = 65.0          # pLDDT below this = Flexible, above = Structured
 PLDDT_WINDOW_LENGTH = 11        # Window size for pLDDT averaging (centered on site)
 
-# Distance thresholds (Cα-Cα based, minimum and maximum)
+# Distance thresholds for ACIDIC residues (Cα-Cα based, minimum and maximum)
 DISTANCE_THRESHOLD_MIN = 4.9    # Minimum Cα-Cα distance in Angstroms
 DISTANCE_THRESHOLD_MAX = 8.0    # Maximum Cα-Cα distance in Angstroms
+
+# Distance thresholds for HYDROPHOBIC residues (Cα-Cα based)
+HYDROPHOBIC_DISTANCE_MIN = 3.0  # Minimum Cα-Cα distance in Angstroms
+HYDROPHOBIC_DISTANCE_MAX = 4.5  # Maximum Cα-Cα distance in Angstroms
 
 # Surface exposure parameters (neighbor counting method)
 EXPOSURE_DISTANCE_THRESHOLD = 10.0  # Angstroms - radius for counting CB neighbors
@@ -129,12 +133,56 @@ def parse_cif(content: str) -> dict:
     - CA coordinates for all residues (for Cα-Cα distance calculations)
     - CB coordinates for all residues (for exposure calculation)
     - pLDDT values from B-factor column
+    - Acidic residue (D, E) coordinates
+    - Hydrophobic residue coordinates
+    - Secondary structure from _struct_conf category
     """
     plddt, seq, coords_ca, coords_cb = {}, {}, {}, {}
     acidic_coords_ca = {}  # CA for acidic residues
+    hydrophobic_coords_ca = {}  # CA for hydrophobic residues
     in_atom, headers, idx = False, [], {}
 
-    for line in content.split('\n'):
+    # Secondary structure storage
+    sec_struct = {}  # residue_num -> 'helix' | 'strand' | 'coil'
+
+    lines = content.split('\n')
+
+    # First pass: extract secondary structure from _struct_conf
+    in_struct_conf = False
+    struct_conf_headers = []
+    struct_conf_idx = {}
+
+    for line in lines:
+        line_stripped = line.strip()
+        if line_stripped.startswith('_struct_conf.'):
+            in_struct_conf = True
+            name = line_stripped.split('.')[1].split()[0]
+            struct_conf_idx[name] = len(struct_conf_headers)
+            struct_conf_headers.append(name)
+        elif in_struct_conf and line_stripped and not line_stripped.startswith(('_', '#', 'loop_')):
+            if 'conf_type_id' in struct_conf_idx:
+                try:
+                    parts = line_stripped.split()
+                    conf_type = parts[struct_conf_idx['conf_type_id']]
+                    beg_seq = int(parts[struct_conf_idx['beg_label_seq_id']])
+                    end_seq = int(parts[struct_conf_idx['end_label_seq_id']])
+
+                    ss_type = 'coil'
+                    if 'HELX' in conf_type or 'helix' in conf_type.lower():
+                        ss_type = 'helix'
+                    elif 'STRN' in conf_type or 'strand' in conf_type.lower():
+                        ss_type = 'strand'
+
+                    for pos in range(beg_seq, end_seq + 1):
+                        sec_struct[pos] = ss_type
+                except Exception:
+                    pass
+        elif in_struct_conf and (line_stripped.startswith('#') or line_stripped.startswith('loop_') or line_stripped.startswith('_')):
+            if not line_stripped.startswith('_struct_conf.'):
+                in_struct_conf = False
+
+    # Second pass: extract atom coordinates
+    for line in lines:
         line = line.strip()
         if line.startswith('_atom_site.'):
             in_atom = True
@@ -156,6 +204,8 @@ def parse_cif(content: str) -> dict:
                     coords_ca[rn] = coord
                     if aa3 in ('ASP', 'GLU'):
                         acidic_coords_ca[rn] = coord
+                    if aa in HYDROPHOBIC_RESIDUES:
+                        hydrophobic_coords_ca[rn] = coord
                 elif atom_name == 'CB':
                     coords_cb[rn] = coord
             except Exception:
@@ -165,6 +215,7 @@ def parse_cif(content: str) -> dict:
 
     lysine_positions = [pos for pos, aa in seq.items() if aa == 'K']
     acidic_positions = sorted(acidic_coords_ca.keys())
+    hydrophobic_positions = sorted(hydrophobic_coords_ca.keys())
 
     # For glycines (no CB), use CA as fallback
     for rn in coords_ca:
@@ -178,7 +229,10 @@ def parse_cif(content: str) -> dict:
         'coords_cb': coords_cb,
         'acidic_coords_ca': acidic_coords_ca,
         'acidic_positions': acidic_positions,
-        'lysine_positions': lysine_positions
+        'hydrophobic_coords_ca': hydrophobic_coords_ca,
+        'hydrophobic_positions': hydrophobic_positions,
+        'lysine_positions': lysine_positions,
+        'secondary_structure': sec_struct
     }
 
 
@@ -212,9 +266,14 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
         'plddt_window_avg': None,
         'aa_m2': None, 'aa_m1': None, 'aa_p1': None, 'aa_p2': None,
         'flexible': None, 'structured': None,
+        'secondary_structure': None,
         'forward_consensus': None, 'inverse_consensus': None,
         'any_acidic_within_threshold': None,
         'exposed_acidic_within_threshold': None,
+        'acidic_in_pm2': None,
+        'exposed_acidic_in_pm2': None,
+        'any_hydrophobic_within_threshold': None,
+        'exposed_hydrophobic_within_threshold': None,
         'Category': None  # Use uppercase to match sites
     }
 
@@ -226,6 +285,9 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
     coords_ca = struct['coords_ca']
     acidic_coords_ca = struct['acidic_coords_ca']
     acidic_positions = struct['acidic_positions']
+    hydrophobic_coords_ca = struct.get('hydrophobic_coords_ca', {})
+    hydrophobic_positions = struct.get('hydrophobic_positions', [])
+    sec_struct = struct.get('secondary_structure', {})
 
     res['plddt_site'] = plddt.get(pos)
 
@@ -245,12 +307,18 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
         else:
             res['structured'] = 'Yes'
 
+    # Secondary structure
+    ss = sec_struct.get(pos)
+    res['secondary_structure'] = ss if ss else 'coil'
+
     # Calculate Cα-Cα distances to all acidic residues
     lys_ca = coords_ca.get(pos)
 
     if acidic_positions and lys_ca:
         has_any_acidic = False
         has_exposed_acidic = False
+        has_in_pm2 = False
+        has_exposed_in_pm2 = False
 
         for ac_pos in acidic_positions:
             if ac_pos not in acidic_coords_ca:
@@ -261,13 +329,47 @@ def analyze_lysine(struct: dict, pos: int) -> dict:
             # Check if within threshold range (min <= d <= max)
             if DISTANCE_THRESHOLD_MIN <= d <= DISTANCE_THRESHOLD_MAX:
                 has_any_acidic = True
-                if calculate_exposure(struct, ac_pos):
+                is_exposed = calculate_exposure(struct, ac_pos)
+                if is_exposed:
                     has_exposed_acidic = True
+
+                # Check relative position for +/-2
+                rel_pos = ac_pos - pos
+                if -2 <= rel_pos <= 2:
+                    has_in_pm2 = True
+                    if is_exposed:
+                        has_exposed_in_pm2 = True
 
         if has_any_acidic:
             res['any_acidic_within_threshold'] = 'Yes'
         if has_exposed_acidic:
             res['exposed_acidic_within_threshold'] = 'Yes'
+        if has_in_pm2:
+            res['acidic_in_pm2'] = 'Yes'
+        if has_exposed_in_pm2:
+            res['exposed_acidic_in_pm2'] = 'Yes'
+
+    # Calculate Cα-Cα distances to all hydrophobic residues
+    if hydrophobic_positions and lys_ca:
+        has_any_hp = False
+        has_exposed_hp = False
+
+        for hp_pos in hydrophobic_positions:
+            if hp_pos not in hydrophobic_coords_ca:
+                continue
+
+            d = calc_distance(lys_ca, hydrophobic_coords_ca[hp_pos])
+
+            # Check if within hydrophobic threshold range
+            if HYDROPHOBIC_DISTANCE_MIN <= d <= HYDROPHOBIC_DISTANCE_MAX:
+                has_any_hp = True
+                if calculate_exposure(struct, hp_pos):
+                    has_exposed_hp = True
+
+        if has_any_hp:
+            res['any_hydrophobic_within_threshold'] = 'Yes'
+        if has_exposed_hp:
+            res['exposed_hydrophobic_within_threshold'] = 'Yes'
 
     res['forward_consensus'] = 'Yes' if res['aa_m1'] in HYDROPHOBIC_RESIDUES and res['aa_p2'] in ACIDIC_RESIDUES else None
     res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
@@ -536,15 +638,24 @@ def analyze_score_predictors(df: pd.DataFrame) -> list:
     results.append({'Metric': 'Low score sites', 'Value': f'{n_low} ({100*n_low/len(valid):.1f}%)'})
     results.append({'Metric': '', 'Value': ''})
 
-    # Define predictors
+    # Define predictors - handle missing columns gracefully
+    def get_mask(col, value='Yes'):
+        if col in valid.columns:
+            return valid[col] == value
+        return pd.Series([False] * len(valid), index=valid.index)
+
     predictors = [
-        ('Flexible', valid['Flexible'] == 'Yes'),
-        ('Structured', valid['Structured'] == 'Yes'),
-        ('Forward_consensus', valid['Forward_consensus'] == 'Yes'),
-        ('Inverse_consensus', valid['Inverse_consensus'] == 'Yes'),
-        ('Any_consensus', (valid['Forward_consensus'] == 'Yes') | (valid['Inverse_consensus'] == 'Yes')),
-        ('Any_acidic_within_threshold', valid['Any_acidic_within_threshold'] == 'Yes'),
-        ('Exposed_acidic_within_threshold', valid['Exposed_acidic_within_threshold'] == 'Yes'),
+        ('Flexible', get_mask('Flexible')),
+        ('Structured', get_mask('Structured')),
+        ('Forward_consensus', get_mask('Forward_consensus')),
+        ('Inverse_consensus', get_mask('Inverse_consensus')),
+        ('Any_consensus', get_mask('Forward_consensus') | get_mask('Inverse_consensus')),
+        ('Any_acidic_within_threshold', get_mask('Any_acidic_within_threshold')),
+        ('Exposed_acidic_within_threshold', get_mask('Exposed_acidic_within_threshold')),
+        ('Acidic_in_pm2', get_mask('Acidic_in_pm2')),
+        ('Exposed_acidic_in_pm2', get_mask('Exposed_acidic_in_pm2')),
+        ('Any_hydrophobic_within_threshold', get_mask('Any_hydrophobic_within_threshold')),
+        ('Exposed_hydrophobic_within_threshold', get_mask('Exposed_hydrophobic_within_threshold')),
     ]
 
     results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
@@ -692,12 +803,21 @@ def analyze_score_predictors_by_flexibility(df: pd.DataFrame) -> dict:
         results.append({'Metric': '', 'Value': ''})
 
         # Define predictors (excluding Flexible/Structured since we've already filtered)
+        def get_mask(col, value='Yes'):
+            if col in subset.columns:
+                return subset[col] == value
+            return pd.Series([False] * len(subset), index=subset.index)
+
         predictors = [
-            ('Forward_consensus', subset['Forward_consensus'] == 'Yes'),
-            ('Inverse_consensus', subset['Inverse_consensus'] == 'Yes'),
-            ('Any_consensus', (subset['Forward_consensus'] == 'Yes') | (subset['Inverse_consensus'] == 'Yes')),
-            ('Any_acidic_within_threshold', subset['Any_acidic_within_threshold'] == 'Yes'),
-            ('Exposed_acidic_within_threshold', subset['Exposed_acidic_within_threshold'] == 'Yes'),
+            ('Forward_consensus', get_mask('Forward_consensus')),
+            ('Inverse_consensus', get_mask('Inverse_consensus')),
+            ('Any_consensus', get_mask('Forward_consensus') | get_mask('Inverse_consensus')),
+            ('Any_acidic_within_threshold', get_mask('Any_acidic_within_threshold')),
+            ('Exposed_acidic_within_threshold', get_mask('Exposed_acidic_within_threshold')),
+            ('Acidic_in_pm2', get_mask('Acidic_in_pm2')),
+            ('Exposed_acidic_in_pm2', get_mask('Exposed_acidic_in_pm2')),
+            ('Any_hydrophobic_within_threshold', get_mask('Any_hydrophobic_within_threshold')),
+            ('Exposed_hydrophobic_within_threshold', get_mask('Exposed_hydrophobic_within_threshold')),
         ]
 
         results.append({'Metric': '--- Binary Predictors (Odds Ratios) ---', 'Value': ''})
@@ -797,6 +917,198 @@ def analyze_score_predictors_by_flexibility(df: pd.DataFrame) -> dict:
         sheets[f'Predictors_{flex_type}'] = pd.DataFrame(results)
 
     return sheets
+
+
+def analyze_acidic_distance_distribution(df: pd.DataFrame) -> pd.DataFrame:
+    """Analyze distribution of acidic distances (in residues) from lysine site.
+
+    Calculates mean, median, std dev separately for:
+    - Flexible sites
+    - Structured sites (overall and broken down by helix/coil/strand)
+    """
+    results = []
+    results.append({'Metric': '=== ACIDIC DISTANCE DISTRIBUTION (residues from Lysine) ===', 'Value': ''})
+    results.append({'Metric': 'Note: Distance in residue positions (not Angstroms)', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+
+    # Column to get relative positions
+    positions_col = 'Distances_positions'
+    if positions_col not in df.columns:
+        results.append({'Metric': 'Error', 'Value': 'Distances_positions column not found'})
+        return pd.DataFrame(results)
+
+    def extract_distances(val):
+        """Extract numeric distances from position string like '-2(exp),+5,-10'."""
+        if pd.isna(val) or val == '':
+            return []
+        distances = []
+        for part in str(val).split(','):
+            # Remove (exp) marker and convert to int
+            part_clean = part.replace('(exp)', '').strip()
+            try:
+                d = int(part_clean)
+                distances.append(abs(d))  # Use absolute distance
+            except:
+                pass
+        return distances
+
+    def calc_stats(distances_list):
+        """Calculate mean, median, std for a list of distances."""
+        if not distances_list:
+            return None, None, None
+        arr = np.array(distances_list)
+        return np.mean(arr), np.median(arr), np.std(arr)
+
+    # Overall stats
+    all_distances = []
+    for val in df[positions_col].dropna():
+        all_distances.extend(extract_distances(val))
+
+    if all_distances:
+        mean, median, std = calc_stats(all_distances)
+        results.append({'Metric': '--- ALL SITES ---', 'Value': ''})
+        results.append({'Metric': 'N acidics', 'Value': len(all_distances)})
+        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
+        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
+        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+        results.append({'Metric': '', 'Value': ''})
+
+    # Flexible sites
+    flex_df = df[df['Flexible'] == 'Yes']
+    flex_distances = []
+    for val in flex_df[positions_col].dropna():
+        flex_distances.extend(extract_distances(val))
+
+    if flex_distances:
+        mean, median, std = calc_stats(flex_distances)
+        results.append({'Metric': '--- FLEXIBLE SITES ---', 'Value': ''})
+        results.append({'Metric': 'N acidics', 'Value': len(flex_distances)})
+        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
+        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
+        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+        results.append({'Metric': '', 'Value': ''})
+
+    # Structured sites - overall
+    struct_df = df[df['Structured'] == 'Yes']
+    struct_distances = []
+    for val in struct_df[positions_col].dropna():
+        struct_distances.extend(extract_distances(val))
+
+    if struct_distances:
+        mean, median, std = calc_stats(struct_distances)
+        results.append({'Metric': '--- STRUCTURED SITES (overall) ---', 'Value': ''})
+        results.append({'Metric': 'N acidics', 'Value': len(struct_distances)})
+        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
+        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
+        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+        results.append({'Metric': '', 'Value': ''})
+
+    # Structured sites by secondary structure
+    ss_col = 'Secondary_structure'
+    if ss_col in df.columns:
+        for ss_type in ['helix', 'strand', 'coil']:
+            ss_df = struct_df[struct_df[ss_col] == ss_type]
+            ss_distances = []
+            for val in ss_df[positions_col].dropna():
+                ss_distances.extend(extract_distances(val))
+
+            if ss_distances:
+                mean, median, std = calc_stats(ss_distances)
+                results.append({'Metric': f'--- STRUCTURED - {ss_type.upper()} ---', 'Value': ''})
+                results.append({'Metric': 'N acidics', 'Value': len(ss_distances)})
+                results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
+                results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
+                results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+                results.append({'Metric': '', 'Value': ''})
+
+    return pd.DataFrame(results)
+
+
+def analyze_hydrophobic_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Analyze hydrophobic features - percentages with hydrophobic within threshold.
+
+    Shows statistics for:
+    - All sites
+    - Flexible sites
+    - Structured sites
+    """
+    results = []
+    results.append({'Metric': '=== HYDROPHOBIC ANALYSIS ===', 'Value': ''})
+    results.append({'Metric': f'Hydrophobic distance threshold: {HYDROPHOBIC_DISTANCE_MIN} - {HYDROPHOBIC_DISTANCE_MAX} Å', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+
+    hp_col = 'Any_hydrophobic_within_threshold'
+    hp_exp_col = 'Exposed_hydrophobic_within_threshold'
+
+    if hp_col not in df.columns:
+        results.append({'Metric': 'Error', 'Value': 'Hydrophobic columns not found'})
+        return pd.DataFrame(results)
+
+    valid_df = df[df['pLDDT_site'].notna()]
+
+    def calc_hp_stats(subset, label):
+        n_total = len(subset)
+        if n_total == 0:
+            return []
+        n_hp = (subset[hp_col] == 'Yes').sum() if hp_col in subset.columns else 0
+        n_hp_exp = (subset[hp_exp_col] == 'Yes').sum() if hp_exp_col in subset.columns else 0
+
+        return [
+            {'Metric': f'--- {label} ---', 'Value': ''},
+            {'Metric': 'Total sites', 'Value': n_total},
+            {'Metric': 'With hydrophobic within threshold', 'Value': f'{n_hp} ({100*n_hp/n_total:.1f}%)'},
+            {'Metric': 'With exposed hydrophobic within threshold', 'Value': f'{n_hp_exp} ({100*n_hp_exp/n_total:.1f}%)'},
+            {'Metric': '', 'Value': ''}
+        ]
+
+    results.extend(calc_hp_stats(valid_df, 'ALL SITES'))
+
+    flex_df = valid_df[valid_df['Flexible'] == 'Yes']
+    results.extend(calc_hp_stats(flex_df, 'FLEXIBLE SITES'))
+
+    struct_df = valid_df[valid_df['Structured'] == 'Yes']
+    results.extend(calc_hp_stats(struct_df, 'STRUCTURED SITES'))
+
+    # Fisher test: Flexible vs Structured for hydrophobic
+    if len(flex_df) > 0 and len(struct_df) > 0:
+        results.append({'Metric': '--- STATISTICAL COMPARISON ---', 'Value': ''})
+
+        flex_hp = (flex_df[hp_col] == 'Yes').sum() if hp_col in flex_df.columns else 0
+        flex_no_hp = len(flex_df) - flex_hp
+        struct_hp = (struct_df[hp_col] == 'Yes').sum() if hp_col in struct_df.columns else 0
+        struct_no_hp = len(struct_df) - struct_hp
+
+        try:
+            odds, p = stats.fisher_exact([[flex_hp, flex_no_hp], [struct_hp, struct_no_hp]])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            flex_rate = flex_hp / len(flex_df) if len(flex_df) > 0 else 0
+            struct_rate = struct_hp / len(struct_df) if len(struct_df) > 0 else 0
+            results.append({
+                'Metric': 'Any_hydrophobic: Flex vs Struct',
+                'Value': f'Flex={flex_rate:.1%}, Struct={struct_rate:.1%}, OR={odds:.2f}, p={p:.2e} {sig}'
+            })
+        except Exception as e:
+            results.append({'Metric': 'Fisher test error', 'Value': str(e)})
+
+        # Same for exposed hydrophobic
+        flex_hp_exp = (flex_df[hp_exp_col] == 'Yes').sum() if hp_exp_col in flex_df.columns else 0
+        flex_no_hp_exp = len(flex_df) - flex_hp_exp
+        struct_hp_exp = (struct_df[hp_exp_col] == 'Yes').sum() if hp_exp_col in struct_df.columns else 0
+        struct_no_hp_exp = len(struct_df) - struct_hp_exp
+
+        try:
+            odds, p = stats.fisher_exact([[flex_hp_exp, flex_no_hp_exp], [struct_hp_exp, struct_no_hp_exp]])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            flex_rate = flex_hp_exp / len(flex_df) if len(flex_df) > 0 else 0
+            struct_rate = struct_hp_exp / len(struct_df) if len(struct_df) > 0 else 0
+            results.append({
+                'Metric': 'Exposed_hydrophobic: Flex vs Struct',
+                'Value': f'Flex={flex_rate:.1%}, Struct={struct_rate:.1%}, OR={odds:.2f}, p={p:.2e} {sig}'
+            })
+        except Exception as e:
+            results.append({'Metric': 'Fisher test error', 'Value': str(e)})
+
+    return pd.DataFrame(results)
 
 
 def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -> pd.DataFrame:
@@ -926,7 +1238,8 @@ def analyze_file(input_file: str, output_file: str = None):
     print(f"\n{'=' * 60}\nSUMO Site Analyzer - Statistical Analysis\n{'=' * 60}\n")
     print(f"Parameters:")
     print(f"  pLDDT threshold: {PLDDT_THRESHOLD}")
-    print(f"  Distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Acidic distance threshold (Cα-Cα): {DISTANCE_THRESHOLD_MIN} - {DISTANCE_THRESHOLD_MAX} Å")
+    print(f"  Hydrophobic distance threshold (Cα-Cα): {HYDROPHOBIC_DISTANCE_MIN} - {HYDROPHOBIC_DISTANCE_MAX} Å")
     print(f"  Exposure: {EXPOSURE_DISTANCE_THRESHOLD} Å radius, <{EXPOSURE_NEIGHBOR_THRESHOLD} neighbors = exposed")
     print(f"  Score thresholds: {SCORE_VERY_HIGH_THRESHOLD}/{SCORE_HIGH_THRESHOLD}/{SCORE_MEDIUM_THRESHOLD}")
     print()
@@ -981,6 +1294,14 @@ def analyze_file(input_file: str, output_file: str = None):
         for sheet_name, sheet_df in flex_struct_predictors.items():
             sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
+        # Acidic distance distribution analysis (in residue positions)
+        acidic_dist_df = analyze_acidic_distance_distribution(valid_df)
+        acidic_dist_df.to_excel(writer, sheet_name='Acidic_Distance_Dist', index=False)
+
+        # Hydrophobic analysis
+        hp_analysis_df = analyze_hydrophobic_features(valid_df)
+        hp_analysis_df.to_excel(writer, sheet_name='Hydrophobic_Analysis', index=False)
+
         # Control comparison sheet (detailed)
         if len(control_df) > 0:
             control_comparison = compare_sites_vs_control(valid_df, control_df)
@@ -999,8 +1320,10 @@ def main():
         print(__doc__)
         print("\nConfigurable parameters (must match sumo_site_core.py):")
         print(f"  PLDDT_THRESHOLD = {PLDDT_THRESHOLD}")
-        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα)")
-        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα)")
+        print(f"  DISTANCE_THRESHOLD_MIN = {DISTANCE_THRESHOLD_MIN} Å (Cα-Cα, acidic)")
+        print(f"  DISTANCE_THRESHOLD_MAX = {DISTANCE_THRESHOLD_MAX} Å (Cα-Cα, acidic)")
+        print(f"  HYDROPHOBIC_DISTANCE_MIN = {HYDROPHOBIC_DISTANCE_MIN} Å (Cα-Cα)")
+        print(f"  HYDROPHOBIC_DISTANCE_MAX = {HYDROPHOBIC_DISTANCE_MAX} Å (Cα-Cα)")
         print(f"  EXPOSURE_DISTANCE_THRESHOLD = {EXPOSURE_DISTANCE_THRESHOLD} Å")
         print(f"  EXPOSURE_NEIGHBOR_THRESHOLD = {EXPOSURE_NEIGHBOR_THRESHOLD}")
         print(f"  SCORE_VERY_HIGH_THRESHOLD = {SCORE_VERY_HIGH_THRESHOLD}")
