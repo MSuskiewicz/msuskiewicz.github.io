@@ -9,7 +9,7 @@ Publications are listed in an inverse chronological order from the most recent t
 
 ✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print; 🅒 – book chapter
 
-<ol start="31" reversed>
+<ol reversed>
 
 31. Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. Nature Structural & Molecular Biology 32 (2025).
 30. Cisse, E.H., Goffinont, S., Castaing, B., Suskiewicz, M.J.✉ Production and purification of SUMO-UBC9 and SUMO-RANGAP1CTD. In: SUMO: Methods and Protocols (Methods in Molecular Biology, vol. 2957), pp. 67–82 (2025). 🅒
