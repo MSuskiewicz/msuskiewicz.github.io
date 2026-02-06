@@ -8,7 +8,8 @@ author_profile: true
 Publications are listed in an inverse chronological order from the most recent to the oldest.
 
 ✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print; 🅒 – book chapter
-<pre>
+<div>
+
 31. Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. Nature Structural & Molecular Biology 32 (2025).
 30. Cisse, E.H., Goffinont, S., Castaing, B., Suskiewicz, M.J.✉ Production and purification of SUMO-UBC9 and SUMO-RANGAP1CTD. In: SUMO: Methods and Protocols (Methods in Molecular Biology, vol. 2957), pp. 67–82 (2025). 🅒
 29. Mishra, A., Goffinont, S., Coste, F., Cisse, E.H., Mance, L., Castaing, B., Suskiewicz, M.J.✉ Fusion Protein-Assisted Crystallization of Human SUMO1. Proteins: Structure, Function, and Bioinformatics, 2025 May 23., doi: 10.1002/prot.26838
@@ -40,6 +41,6 @@ Publications are listed in an inverse chronological order from the most recent t
 3.	Trentini, D. B.✱, Suskiewicz, M. J.✱, Heuck, A., Kurzbauer, R., Deszcz, L., Mechtler, K. & Clausen, T. ✉ Arginine phosphorylation marks proteins for degradation by a Clp protease. Nature 539, 48–53 (2016).
 2.	Suskiewicz, M. J. & Clausen, T.✉ Chemical biology interrogates protein arginine phosphorylation. Cell Chem. Biol. 23, 888–890 (2016). 🅝
 1.	Suskiewicz, M. J., Sussman, J. L.✉, Silman, I. & Shaul, Y.✉ Context-dependent resistance to proteolysis of intrinsically disordered proteins. Protein Sci. 20, 1285–1297 (2011). 🅡
-
+</div>
 
 The most recent publications might be missing - please visit <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">my Google Scholar profile</a>.
