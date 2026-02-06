@@ -22,5 +22,5 @@ The river Loire in Orléans in summer 2023 (above) and autumn 2022 (below)
 
 I live in France, but my roots trace back to Poland. I completed my scientific education and training mostly in the UK (my studies and then a postdoc in the Ivan Ahel lab) and Austria (PhD and a postdoc in the Tim Clausen lab). 
 
-Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small and very irregular Polish online cultural magazine, pismosuma.pl. I enjoy being with family and friends, reading, writing, walking, and drinking tea. I live with my family in Saint-Jean-le-Blanc and it is no longer true what the older version of this website stated, namely that I go to work by bus 41, because since September I've been going to work by bike (even in snow, mind you).
+Privately, I have a family, I'm a lay dominican, and I serve as an editor of a small and very irregular Polish online cultural magazine, pismosuma.pl. I enjoy being with family and friends, reading, writing, walking, and drinking tea. I live with my family in Saint-Jean-le-Blanc and it is no longer true that what the older version of this website stated, namely that I go to work by bus 41, because since September I've been going to work by bike (even in snow, mind you).
 
