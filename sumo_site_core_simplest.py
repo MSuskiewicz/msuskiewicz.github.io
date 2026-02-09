@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-SUMO Site Analyzer - Core Output (Simplified Version)
-======================================================
-Simple version without threading or session pooling.
+SUMO Site Analyzer - Core Output (Simplest Version)
+====================================================
+Minimal version without threading, session pooling, or sliding windows.
 Processes Excel files with SUMO modification sites, fetches AlphaFold structures,
 and generates core analysis data.
 
 Usage:
-    python sumo_site_core_simple.py <input_excel_file> [output_file]
+    python sumo_site_core_simplest.py <input_excel_file> [output_file]
 """
 
 import sys
@@ -29,7 +29,6 @@ HYDROPHOBIC_DISTANCE_MIN = 3.0
 HYDROPHOBIC_DISTANCE_MAX = 4.5
 EXPOSURE_DISTANCE_THRESHOLD = 10.0
 EXPOSURE_NEIGHBOR_THRESHOLD = 18
-SLIDING_WINDOW_LENGTH = 100
 
 HYDROPHOBIC_RESIDUES = {'A', 'V', 'L', 'I', 'M', 'F', 'C', 'P', 'Y'}
 ACIDIC_RESIDUES = {'D', 'E'}
@@ -67,16 +66,6 @@ def parse_uniprot_id(protein_id):
     return protein_id, None
 
 
-def get_uniprot_sequence(uid, isoform=None):
-    """Get sequence from UniProt."""
-    suffix = f"-{isoform}" if isoform else ""
-    r = safe_get(f"https://rest.uniprot.org/uniprotkb/{uid}{suffix}.fasta")
-    if r:
-        lines = r.text.strip().split('\n')
-        return ''.join(l for l in lines if not l.startswith('>'))
-    return None
-
-
 def fetch_alphafold(uid):
     """Fetch AlphaFold structure."""
     r = safe_get(f"https://alphafold.ebi.ac.uk/api/prediction/{uid}")
@@ -99,37 +88,10 @@ def parse_cif(content):
     """Parse mmCIF to extract coordinates and pLDDT."""
     plddt, seq, coords_ca, coords_cb = {}, {}, {}, {}
     acidic_coords_ca, hydrophobic_coords_ca = {}, {}
-    sec_struct = {}
     in_atom, headers, idx = False, [], {}
 
     lines = content.split('\n')
 
-    # Extract secondary structure
-    in_struct_conf = False
-    struct_conf_idx = {}
-    for line in lines:
-        line = line.strip()
-        if line.startswith('_struct_conf.'):
-            in_struct_conf = True
-            name = line.split('.')[1].split()[0]
-            struct_conf_idx[name] = len(struct_conf_idx)
-        elif in_struct_conf and line and not line.startswith(('_', '#', 'loop_')):
-            if 'conf_type_id' in struct_conf_idx:
-                try:
-                    parts = line.split()
-                    conf_type = parts[struct_conf_idx['conf_type_id']]
-                    beg_seq = int(parts[struct_conf_idx['beg_label_seq_id']])
-                    end_seq = int(parts[struct_conf_idx['end_label_seq_id']])
-                    ss_type = 'helix' if 'HELX' in conf_type else 'strand' if 'STRN' in conf_type else 'coil'
-                    for pos in range(beg_seq, end_seq + 1):
-                        sec_struct[pos] = ss_type
-                except:
-                    pass
-        elif in_struct_conf and line.startswith(('#', 'loop_', '_')):
-            if not line.startswith('_struct_conf.'):
-                in_struct_conf = False
-
-    # Extract atom coordinates
     for line in lines:
         line = line.strip()
         if line.startswith('_atom_site.'):
@@ -169,8 +131,7 @@ def parse_cif(content):
     return {
         'plddt': plddt, 'sequence': seq, 'coords_ca': coords_ca, 'coords_cb': coords_cb,
         'acidic_coords_ca': acidic_coords_ca, 'acidic_positions': sorted(acidic_coords_ca.keys()),
-        'hydrophobic_coords_ca': hydrophobic_coords_ca, 'hydrophobic_positions': sorted(hydrophobic_coords_ca.keys()),
-        'secondary_structure': sec_struct
+        'hydrophobic_coords_ca': hydrophobic_coords_ca, 'hydrophobic_positions': sorted(hydrophobic_coords_ca.keys())
     }
 
 
@@ -195,10 +156,9 @@ def analyze_site(struct, pos):
         'acidics_within_threshold': None, 'distances_angstroms': None, 'distances_positions': None,
         'any_acidic_within_threshold': None, 'exposed_acidic_within_threshold': None,
         'acidic_in_pm2': None, 'exposed_acidic_in_pm2': None,
-        'extended_acidics_downstream': 0, 'extended_acidics_upstream': 0, 'extended_acidics_total': 0,
         'hydrophobics_within_threshold': None, 'hydrophobic_distances_angstroms': None, 'hydrophobic_distances_positions': None,
         'any_hydrophobic_within_threshold': None, 'exposed_hydrophobic_within_threshold': None,
-        'flexible': None, 'structured': None, 'secondary_structure': None,
+        'flexible': None, 'structured': None,
         'forward_consensus': None, 'inverse_consensus': None, 'category': None
     }
 
@@ -207,7 +167,6 @@ def analyze_site(struct, pos):
 
     plddt, seq, coords_ca = struct['plddt'], struct['sequence'], struct['coords_ca']
     acidic_coords_ca, acidic_positions = struct['acidic_coords_ca'], struct['acidic_positions']
-    sec_struct = struct.get('secondary_structure', {})
 
     # pLDDT
     res['plddt_site'] = plddt.get(pos)
@@ -224,8 +183,6 @@ def analyze_site(struct, pos):
     if res['plddt_window_avg'] is not None:
         res['flexible'] = 'Yes' if res['plddt_window_avg'] < PLDDT_THRESHOLD else None
         res['structured'] = 'Yes' if res['plddt_window_avg'] >= PLDDT_THRESHOLD else None
-
-    res['secondary_structure'] = sec_struct.get(pos, 'coil')
 
     # Acidic residues within threshold
     lys_ca = coords_ca.get(pos)
@@ -275,15 +232,6 @@ def analyze_site(struct, pos):
                 res['acidic_in_pm2'] = 'Yes'
             if has_exposed_in_pm2:
                 res['exposed_acidic_in_pm2'] = 'Yes'
-
-    # Extended acidics
-    for offset in range(3, 11):
-        if seq.get(pos + offset) in ACIDIC_RESIDUES:
-            res['extended_acidics_downstream'] += 1
-    for offset in range(-10, -2):
-        if seq.get(pos + offset) in ACIDIC_RESIDUES:
-            res['extended_acidics_upstream'] += 1
-    res['extended_acidics_total'] = res['extended_acidics_downstream'] + res['extended_acidics_upstream']
 
     # Hydrophobic residues
     hydrophobic_coords_ca = struct.get('hydrophobic_coords_ca', {})
@@ -401,16 +349,12 @@ def process_file(input_file, output_file=None):
         'any_acidic_within_threshold': 'Any_acidic_within_threshold',
         'exposed_acidic_within_threshold': 'Exposed_acidic_within_threshold',
         'acidic_in_pm2': 'Acidic_in_pm2', 'exposed_acidic_in_pm2': 'Exposed_acidic_in_pm2',
-        'extended_acidics_downstream': 'Extended_acidics_downstream',
-        'extended_acidics_upstream': 'Extended_acidics_upstream',
-        'extended_acidics_total': 'Extended_acidics_total',
         'hydrophobics_within_threshold': 'Hydrophobics_within_threshold',
         'hydrophobic_distances_angstroms': 'Hydrophobic_distances_Angstroms',
         'hydrophobic_distances_positions': 'Hydrophobic_distances_positions',
         'any_hydrophobic_within_threshold': 'Any_hydrophobic_within_threshold',
         'exposed_hydrophobic_within_threshold': 'Exposed_hydrophobic_within_threshold',
         'flexible': 'Flexible', 'structured': 'Structured',
-        'secondary_structure': 'Secondary_structure',
         'forward_consensus': 'Forward_consensus', 'inverse_consensus': 'Inverse_consensus',
         'category': 'Category'
     }
@@ -419,7 +363,7 @@ def process_file(input_file, output_file=None):
     df = pd.concat([df, res_df], axis=1)
 
     if not output_file:
-        output_file = os.path.splitext(input_file)[0] + '_core_simple.xlsx'
+        output_file = os.path.splitext(input_file)[0] + '_core_simplest.xlsx'
 
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='Sites', index=False)

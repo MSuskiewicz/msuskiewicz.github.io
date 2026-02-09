@@ -433,12 +433,12 @@ def count_categories(df: pd.DataFrame) -> dict:
 
     Categories (in order of priority):
     1. consensus - forward or inverse consensus motif
-    2. acidic_pm2 - acidic in +/-2 position (excluding consensus)
+    2. exposed_acidic_pm2 - exposed acidic in +/-2 position (excluding consensus)
     3. exposed_acidic - exposed acidic within threshold (excluding previous)
     4. buried_acidic - buried acidic within threshold (excluding previous)
     5. no_acidic - no acidic within threshold
     """
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
     # Check if we need to compute categories from columns or use existing Category
     # We'll compute from columns for the 5-category scheme
@@ -465,10 +465,10 @@ def count_categories(df: pd.DataFrame) -> dict:
                 counts[f'{prefix}_consensus'] += 1
                 continue
 
-            # Check acidic in +/-2 (but not consensus)
-            has_acidic_pm2 = row.get('Acidic_in_pm2') == 'Yes' or row.get('acidic_in_pm2') == 'Yes'
-            if has_acidic_pm2:
-                counts[f'{prefix}_acidic_pm2'] += 1
+            # Check exposed acidic in +/-2 (but not consensus)
+            has_exposed_pm2 = row.get('Exposed_acidic_in_pm2') == 'Yes' or row.get('exposed_acidic_in_pm2') == 'Yes'
+            if has_exposed_pm2:
+                counts[f'{prefix}_exposed_acidic_pm2'] += 1
                 continue
 
             # Check exposed acidic (but not previous)
@@ -495,7 +495,7 @@ def count_categories(df: pd.DataFrame) -> dict:
 
 def calculate_rates(counts: dict) -> dict:
     """Calculate rates within Flexible and Structured."""
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
     rates = {}
     for prefix in ['Flexible', 'Structured']:
         total = counts[f'Total_{prefix}']
@@ -515,7 +515,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
 
     Uses 5-category hierarchical scheme:
     1. consensus
-    2. acidic_pm2
+    2. exposed_acidic_pm2
     3. exposed_acidic
     4. buried_acidic
     5. no_acidic
@@ -523,7 +523,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     results = []
     results.append({'Metric': f'=== {label} FLEXIBLE vs STRUCTURED ===', 'Value': ''})
 
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
     counts = count_categories(df)
     rates = calculate_rates(counts)
@@ -577,9 +577,9 @@ def assign_extended_category(row) -> str:
 
     Categories (in order of priority):
     1. Consensus - forward or inverse consensus motif
-    2. Acidic_pm2 - acidic in +/-2 position (excluding consensus)
+    2. Exposed_acidic_pm2 - exposed acidic in +/-2 position (excluding consensus)
     3. Exposed_acidic - exposed acidic within threshold (excluding previous)
-    4. Any_acidic - any acidic within threshold (excluding previous)
+    4. Buried_acidic - buried acidic within threshold (excluding previous)
     5. No_acidic - no acidic within threshold
     """
     # Check for consensus (highest priority)
@@ -588,20 +588,20 @@ def assign_extended_category(row) -> str:
     if is_fwd_consensus or is_inv_consensus:
         return 'Consensus'
 
-    # Check for acidic in +/-2 position (but not consensus)
-    has_acidic_pm2 = row.get('Acidic_in_pm2') == 'Yes' or row.get('acidic_in_pm2') == 'Yes'
-    if has_acidic_pm2:
-        return 'Acidic_pm2'
+    # Check for exposed acidic in +/-2 position (but not consensus)
+    has_exposed_pm2 = row.get('Exposed_acidic_in_pm2') == 'Yes' or row.get('exposed_acidic_in_pm2') == 'Yes'
+    if has_exposed_pm2:
+        return 'Exposed_acidic_pm2'
 
     # Check for exposed acidic within threshold (but not previous)
     has_exposed_acidic = row.get('Exposed_acidic_within_threshold') == 'Yes' or row.get('exposed_acidic_within_threshold') == 'Yes'
     if has_exposed_acidic:
         return 'Exposed_acidic'
 
-    # Check for any acidic within threshold (but not previous)
+    # Check for any acidic within threshold (buried)
     has_any_acidic = row.get('Any_acidic_within_threshold') == 'Yes' or row.get('any_acidic_within_threshold') == 'Yes'
     if has_any_acidic:
-        return 'Any_acidic'
+        return 'Buried_acidic'
 
     # No acidic within threshold
     return 'No_acidic'
@@ -609,7 +609,7 @@ def assign_extended_category(row) -> str:
 
 def count_extended_categories(df: pd.DataFrame) -> dict:
     """Count sites in each extended category for Flexible and Structured."""
-    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+    ext_categories = ['Consensus', 'Exposed_acidic_pm2', 'Exposed_acidic', 'Buried_acidic', 'No_acidic']
 
     # Assign extended category to each row
     df = df.copy()
@@ -636,7 +636,7 @@ def count_extended_categories(df: pd.DataFrame) -> dict:
 
 def calculate_extended_rates(counts: dict) -> dict:
     """Calculate rates within Flexible and Structured for extended categories."""
-    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+    ext_categories = ['Consensus', 'Exposed_acidic_pm2', 'Exposed_acidic', 'Buried_acidic', 'No_acidic']
     rates = {}
 
     for prefix in ['Flexible', 'Structured']:
@@ -657,17 +657,17 @@ def compare_flex_vs_struct_extended(df: pd.DataFrame, label: str = "") -> list:
 
     Uses 5-category hierarchical classification:
     1. Consensus
-    2. Acidic_pm2 (acidic in +/-2, excluding consensus)
+    2. Exposed_acidic_pm2 (exposed acidic in +/-2, excluding consensus)
     3. Exposed_acidic (excluding previous)
-    4. Any_acidic (excluding previous)
+    4. Buried_acidic (excluding previous)
     5. No_acidic
     """
     results = []
     results.append({'Metric': f'=== {label} EXTENDED CATEGORIES: FLEXIBLE vs STRUCTURED ===', 'Value': ''})
-    results.append({'Metric': 'Hierarchy: Consensus > Acidic_pm2 > Exposed_acidic > Any_acidic > No_acidic', 'Value': ''})
+    results.append({'Metric': 'Hierarchy: Consensus > Exposed_acidic_pm2 > Exposed_acidic > Buried_acidic > No_acidic', 'Value': ''})
     results.append({'Metric': '', 'Value': ''})
 
-    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+    ext_categories = ['Consensus', 'Exposed_acidic_pm2', 'Exposed_acidic', 'Buried_acidic', 'No_acidic']
 
     counts = count_extended_categories(df)
     rates = calculate_extended_rates(counts)
@@ -1605,7 +1605,7 @@ def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -
     counts = count_categories(df)
     rates = calculate_rates(counts)
 
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
     results.append({'Metric': '--- SUMO Sites Category Counts ---', 'Value': ''})
     for suffix in suffixes:
@@ -1699,7 +1699,7 @@ def perform_stratified_analysis(df: pd.DataFrame, score_col: str = 'Score (SUMO 
         counts = count_categories(subset)
         rates = calculate_rates(counts)
 
-        suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+        suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
         results.append({'Metric': '--- Category Counts ---', 'Value': ''})
         for suffix in suffixes:

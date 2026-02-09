@@ -35,7 +35,7 @@ ACIDIC_RESIDUES = {'D', 'E'}
 
 def count_categories(df):
     """Count sites in each 5-category hierarchical scheme."""
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
     counts = {}
 
     for prefix in ['Flexible', 'Structured']:
@@ -56,9 +56,9 @@ def count_categories(df):
                 counts[f'{prefix}_consensus'] += 1
                 continue
 
-            # Acidic in +/-2
-            if row.get('Acidic_in_pm2') == 'Yes':
-                counts[f'{prefix}_acidic_pm2'] += 1
+            # Exposed acidic in +/-2
+            if row.get('Exposed_acidic_in_pm2') == 'Yes':
+                counts[f'{prefix}_exposed_acidic_pm2'] += 1
                 continue
 
             # Exposed acidic
@@ -83,7 +83,7 @@ def count_categories(df):
 
 def calculate_rates(counts):
     """Calculate rates within Flexible and Structured."""
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
     rates = {}
     for prefix in ['Flexible', 'Structured']:
         total = counts[f'Total_{prefix}']
@@ -98,7 +98,7 @@ def compare_flex_vs_struct(df, label=""):
     results = []
     results.append({'Metric': f'=== {label} FLEXIBLE vs STRUCTURED ===', 'Value': ''})
 
-    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+    suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
     counts = count_categories(df)
     rates = calculate_rates(counts)
 
@@ -182,7 +182,7 @@ def analyze_score_predictors(df):
         ('Any_consensus', (valid.get('Forward_consensus') == 'Yes') | (valid.get('Inverse_consensus') == 'Yes')),
         ('Any_acidic_within_threshold', valid.get('Any_acidic_within_threshold') == 'Yes'),
         ('Exposed_acidic_within_threshold', valid.get('Exposed_acidic_within_threshold') == 'Yes'),
-        ('Acidic_in_pm2', valid.get('Acidic_in_pm2') == 'Yes'),
+        ('Exposed_acidic_in_pm2', valid.get('Exposed_acidic_in_pm2') == 'Yes'),
     ]
 
     results.append({'Metric': '--- Binary Predictors ---', 'Value': ''})
@@ -296,7 +296,7 @@ def analyze_file(input_file, output_file=None):
         counts = count_categories(valid_df)
         rates = calculate_rates(counts)
 
-        suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+        suffixes = ['consensus', 'exposed_acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
         global_results.append({'Metric': '--- Category Counts ---', 'Value': ''})
         for suffix in suffixes:

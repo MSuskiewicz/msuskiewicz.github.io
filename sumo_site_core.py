@@ -757,15 +757,18 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
     # Inverse: ExKψ (acidic at -2, hydrophobic at +1)
     res['inverse_consensus'] = 'Yes' if res['aa_m2'] in ACIDIC_RESIDUES and res['aa_p1'] in HYDROPHOBIC_RESIDUES else None
 
-    # Category assignment
+    # Category assignment - 5-level hierarchy
     is_consensus = (res['forward_consensus'] == 'Yes' or res['inverse_consensus'] == 'Yes')
-    has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
+    has_exposed_pm2 = (res['exposed_acidic_in_pm2'] == 'Yes')
     has_exposed_acidic = (res['exposed_acidic_within_threshold'] == 'Yes')
+    has_any_acidic = (res['any_acidic_within_threshold'] == 'Yes')
 
     prefix = "Flexible" if res['flexible'] == 'Yes' else "Structured"
 
     if is_consensus:
         suffix = "_consensus"
+    elif has_exposed_pm2:
+        suffix = "_exposed_acidic_pm2"
     elif has_exposed_acidic:
         suffix = "_exposed_acidic"
     elif has_any_acidic:
