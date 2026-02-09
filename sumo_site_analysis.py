@@ -523,6 +523,191 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     return results
 
 
+def assign_extended_category(row) -> str:
+    """Assign hierarchical 5-category classification to a site.
+
+    Categories (in order of priority):
+    1. Consensus - forward or inverse consensus motif
+    2. Acidic_pm2 - acidic in +/-2 position (excluding consensus)
+    3. Exposed_acidic - exposed acidic within threshold (excluding previous)
+    4. Any_acidic - any acidic within threshold (excluding previous)
+    5. No_acidic - no acidic within threshold
+    """
+    # Check for consensus (highest priority)
+    is_fwd_consensus = row.get('Forward_consensus') == 'Yes' or row.get('forward_consensus') == 'Yes'
+    is_inv_consensus = row.get('Inverse_consensus') == 'Yes' or row.get('inverse_consensus') == 'Yes'
+    if is_fwd_consensus or is_inv_consensus:
+        return 'Consensus'
+
+    # Check for acidic in +/-2 position (but not consensus)
+    has_acidic_pm2 = row.get('Acidic_in_pm2') == 'Yes' or row.get('acidic_in_pm2') == 'Yes'
+    if has_acidic_pm2:
+        return 'Acidic_pm2'
+
+    # Check for exposed acidic within threshold (but not previous)
+    has_exposed_acidic = row.get('Exposed_acidic_within_threshold') == 'Yes' or row.get('exposed_acidic_within_threshold') == 'Yes'
+    if has_exposed_acidic:
+        return 'Exposed_acidic'
+
+    # Check for any acidic within threshold (but not previous)
+    has_any_acidic = row.get('Any_acidic_within_threshold') == 'Yes' or row.get('any_acidic_within_threshold') == 'Yes'
+    if has_any_acidic:
+        return 'Any_acidic'
+
+    # No acidic within threshold
+    return 'No_acidic'
+
+
+def count_extended_categories(df: pd.DataFrame) -> dict:
+    """Count sites in each extended category for Flexible and Structured."""
+    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+
+    # Assign extended category to each row
+    df = df.copy()
+    df['Extended_Category'] = df.apply(assign_extended_category, axis=1)
+
+    # Separate Flexible and Structured
+    flex_col = 'Flexible' if 'Flexible' in df.columns else 'flexible'
+    struct_col = 'Structured' if 'Structured' in df.columns else 'structured'
+
+    flex_df = df[df[flex_col] == 'Yes'] if flex_col in df.columns else pd.DataFrame()
+    struct_df = df[df[struct_col] == 'Yes'] if struct_col in df.columns else pd.DataFrame()
+
+    counts = {}
+    for cat in ext_categories:
+        counts[f'Flexible_{cat}'] = len(flex_df[flex_df['Extended_Category'] == cat]) if len(flex_df) > 0 else 0
+        counts[f'Structured_{cat}'] = len(struct_df[struct_df['Extended_Category'] == cat]) if len(struct_df) > 0 else 0
+
+    counts['Total_Flexible'] = sum(counts[f'Flexible_{c}'] for c in ext_categories)
+    counts['Total_Structured'] = sum(counts[f'Structured_{c}'] for c in ext_categories)
+    counts['Total'] = counts['Total_Flexible'] + counts['Total_Structured']
+
+    return counts
+
+
+def calculate_extended_rates(counts: dict) -> dict:
+    """Calculate rates within Flexible and Structured for extended categories."""
+    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+    rates = {}
+
+    for prefix in ['Flexible', 'Structured']:
+        total = counts[f'Total_{prefix}']
+        if total > 0:
+            for cat in ext_categories:
+                key = f'{prefix}_{cat}'
+                rates[f'{key}_rate'] = counts[key] / total
+        else:
+            for cat in ext_categories:
+                key = f'{prefix}_{cat}'
+                rates[f'{key}_rate'] = None
+    return rates
+
+
+def compare_flex_vs_struct_extended(df: pd.DataFrame, label: str = "") -> list:
+    """Chi-square test comparing extended category distribution between Flexible and Structured.
+
+    Uses 5-category hierarchical classification:
+    1. Consensus
+    2. Acidic_pm2 (acidic in +/-2, excluding consensus)
+    3. Exposed_acidic (excluding previous)
+    4. Any_acidic (excluding previous)
+    5. No_acidic
+    """
+    results = []
+    results.append({'Metric': f'=== {label} EXTENDED CATEGORIES: FLEXIBLE vs STRUCTURED ===', 'Value': ''})
+    results.append({'Metric': 'Hierarchy: Consensus > Acidic_pm2 > Exposed_acidic > Any_acidic > No_acidic', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+
+    ext_categories = ['Consensus', 'Acidic_pm2', 'Exposed_acidic', 'Any_acidic', 'No_acidic']
+
+    counts = count_extended_categories(df)
+    rates = calculate_extended_rates(counts)
+
+    # Show counts
+    results.append({'Metric': 'Category', 'Value': 'Flexible | Structured'})
+    for cat in ext_categories:
+        f_count = counts[f'Flexible_{cat}']
+        s_count = counts[f'Structured_{cat}']
+        f_rate = rates.get(f'Flexible_{cat}_rate', 0) or 0
+        s_rate = rates.get(f'Structured_{cat}_rate', 0) or 0
+        results.append({
+            'Metric': cat,
+            'Value': f'{f_count} ({f_rate:.1%}) | {s_count} ({s_rate:.1%})'
+        })
+
+    results.append({'Metric': 'TOTAL', 'Value': f"{counts['Total_Flexible']} | {counts['Total_Structured']}"})
+
+    # Chi-square test
+    flex_counts = [counts[f'Flexible_{c}'] for c in ext_categories]
+    struct_counts = [counts[f'Structured_{c}'] for c in ext_categories]
+
+    if sum(flex_counts) > 0 and sum(struct_counts) > 0:
+        results.append({'Metric': '', 'Value': ''})
+        try:
+            chi2, p, dof, expected = stats.chi2_contingency([flex_counts, struct_counts])
+            sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+            results.append({'Metric': 'Chi-square test', 'Value': f'χ²={chi2:.2f}, df={dof}, p={p:.2e} {sig}'})
+        except Exception as e:
+            results.append({'Metric': 'Chi-square error', 'Value': str(e)})
+
+        # Fisher exact for each category (Flexible vs Structured)
+        results.append({'Metric': '', 'Value': ''})
+        results.append({'Metric': '--- Fisher exact tests (each category) ---', 'Value': ''})
+        for i, cat in enumerate(ext_categories):
+            f_yes, f_no = flex_counts[i], sum(flex_counts) - flex_counts[i]
+            s_yes, s_no = struct_counts[i], sum(struct_counts) - struct_counts[i]
+            try:
+                odds, p = stats.fisher_exact([[f_yes, f_no], [s_yes, s_no]])
+                sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                results.append({'Metric': cat, 'Value': f'OR={odds:.2f}, p={p:.2e} {sig}'})
+            except:
+                pass
+
+    return results
+
+
+def analyze_extended_categories_by_score(df: pd.DataFrame, score_col: str = 'Score (SUMO site)') -> dict:
+    """Analyze extended categories comparison between Flexible and Structured, by score groups.
+
+    Returns a dict with DataFrames for each score group.
+    """
+    sheets = {}
+
+    if score_col not in df.columns:
+        return sheets
+
+    df = df.copy()
+    df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
+
+    score_groups = {
+        'VeryHigh': df[df[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+        'High': df[(df[score_col] >= SCORE_HIGH_THRESHOLD) & (df[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
+        'Medium': df[(df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df[score_col] < SCORE_HIGH_THRESHOLD)],
+        'Low': df[df[score_col] < SCORE_MEDIUM_THRESHOLD]
+    }
+
+    # All sites combined
+    all_results = []
+    all_results.append({'Metric': '=== ALL SITES ===', 'Value': ''})
+    all_results.append({'Metric': f'N = {len(df)}', 'Value': ''})
+    all_results.append({'Metric': '', 'Value': ''})
+    all_results.extend(compare_flex_vs_struct_extended(df, 'ALL'))
+
+    # Add separator and score group analyses
+    for group_name, group_df in score_groups.items():
+        if len(group_df) > 0:
+            all_results.append({'Metric': '', 'Value': ''})
+            all_results.append({'Metric': '=' * 60, 'Value': ''})
+            all_results.append({'Metric': f'=== SCORE GROUP: {group_name.upper()} ===', 'Value': ''})
+            all_results.append({'Metric': f'N = {len(group_df)}', 'Value': ''})
+            all_results.append({'Metric': '', 'Value': ''})
+            all_results.extend(compare_flex_vs_struct_extended(group_df, group_name.upper()))
+
+    sheets['Extended_Categories'] = pd.DataFrame(all_results)
+
+    return sheets
+
+
 def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -> list:
     """Compare SUMO sites vs all lysines (control)."""
     results = []
@@ -1404,6 +1589,11 @@ def analyze_file(input_file: str, output_file: str = None):
         # Hydrophobic analysis
         hp_analysis_df = analyze_hydrophobic_features(valid_df)
         hp_analysis_df.to_excel(writer, sheet_name='Hydrophobic_Analysis', index=False)
+
+        # Extended categories analysis (5-category hierarchy by score groups)
+        extended_cat_sheets = analyze_extended_categories_by_score(valid_df)
+        for sheet_name, sheet_df in extended_cat_sheets.items():
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
         # Control comparison sheet (detailed)
         if len(control_df) > 0:
