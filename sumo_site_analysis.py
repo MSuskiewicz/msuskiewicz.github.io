@@ -429,21 +429,65 @@ def get_all_lysines_analysis(uniprot_ids: list) -> pd.DataFrame:
 # =============================================================================
 
 def count_categories(df: pd.DataFrame) -> dict:
-    """Count sites in each category."""
-    categories = [
-        'Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic',
-        'Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic'
-    ]
+    """Count sites in each category using 5-category hierarchical scheme.
 
-    # Handle both uppercase (from core output) and lowercase (from control analysis) column names
-    cat_col = 'Category' if 'Category' in df.columns else 'category'
+    Categories (in order of priority):
+    1. consensus - forward or inverse consensus motif
+    2. acidic_pm2 - acidic in +/-2 position (excluding consensus)
+    3. exposed_acidic - exposed acidic within threshold (excluding previous)
+    4. buried_acidic - buried acidic within threshold (excluding previous)
+    5. no_acidic - no acidic within threshold
+    """
+    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
+    # Check if we need to compute categories from columns or use existing Category
+    # We'll compute from columns for the 5-category scheme
     counts = {}
-    for cat in categories:
-        counts[cat] = len(df[df[cat_col] == cat])
 
-    counts['Total_Flexible'] = sum(counts[c] for c in categories[:4])
-    counts['Total_Structured'] = sum(counts[c] for c in categories[4:])
+    for prefix in ['Flexible', 'Structured']:
+        flex_col = prefix
+        if flex_col not in df.columns:
+            for suffix in suffixes:
+                counts[f'{prefix}_{suffix}'] = 0
+            continue
+
+        subset = df[df[flex_col] == 'Yes']
+
+        # Count using hierarchical assignment
+        for suffix in suffixes:
+            counts[f'{prefix}_{suffix}'] = 0
+
+        for _, row in subset.iterrows():
+            # Check consensus first
+            is_fwd = row.get('Forward_consensus') == 'Yes' or row.get('forward_consensus') == 'Yes'
+            is_inv = row.get('Inverse_consensus') == 'Yes' or row.get('inverse_consensus') == 'Yes'
+            if is_fwd or is_inv:
+                counts[f'{prefix}_consensus'] += 1
+                continue
+
+            # Check acidic in +/-2 (but not consensus)
+            has_acidic_pm2 = row.get('Acidic_in_pm2') == 'Yes' or row.get('acidic_in_pm2') == 'Yes'
+            if has_acidic_pm2:
+                counts[f'{prefix}_acidic_pm2'] += 1
+                continue
+
+            # Check exposed acidic (but not previous)
+            has_exposed = row.get('Exposed_acidic_within_threshold') == 'Yes' or row.get('exposed_acidic_within_threshold') == 'Yes'
+            if has_exposed:
+                counts[f'{prefix}_exposed_acidic'] += 1
+                continue
+
+            # Check any acidic (buried)
+            has_any = row.get('Any_acidic_within_threshold') == 'Yes' or row.get('any_acidic_within_threshold') == 'Yes'
+            if has_any:
+                counts[f'{prefix}_buried_acidic'] += 1
+                continue
+
+            # No acidic
+            counts[f'{prefix}_no_acidic'] += 1
+
+    counts['Total_Flexible'] = sum(counts[f'Flexible_{s}'] for s in suffixes)
+    counts['Total_Structured'] = sum(counts[f'Structured_{s}'] for s in suffixes)
     counts['Total'] = counts['Total_Flexible'] + counts['Total_Structured']
 
     return counts
@@ -451,30 +495,35 @@ def count_categories(df: pd.DataFrame) -> dict:
 
 def calculate_rates(counts: dict) -> dict:
     """Calculate rates within Flexible and Structured."""
+    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
     rates = {}
     for prefix in ['Flexible', 'Structured']:
         total = counts[f'Total_{prefix}']
         if total > 0:
-            for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
+            for suffix in suffixes:
                 key = f'{prefix}_{suffix}'
                 rates[f'{key}_rate'] = counts[key] / total
         else:
-            for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
+            for suffix in suffixes:
                 key = f'{prefix}_{suffix}'
                 rates[f'{key}_rate'] = None
     return rates
 
 
 def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
-    """Chi-square test comparing category distribution between Flexible and Structured."""
+    """Chi-square test comparing category distribution between Flexible and Structured.
+
+    Uses 5-category hierarchical scheme:
+    1. consensus
+    2. acidic_pm2
+    3. exposed_acidic
+    4. buried_acidic
+    5. no_acidic
+    """
     results = []
     results.append({'Metric': f'=== {label} FLEXIBLE vs STRUCTURED ===', 'Value': ''})
 
-    # Handle case where no valid category data exists
-    cat_col = 'Category' if 'Category' in df.columns else 'category'
-    if cat_col not in df.columns:
-        results.append({'Metric': 'Error', 'Value': 'No Category column found'})
-        return results
+    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
 
     counts = count_categories(df)
     rates = calculate_rates(counts)
@@ -482,7 +531,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     # Show counts
     results.append({'Metric': '', 'Value': ''})
     results.append({'Metric': 'Category', 'Value': 'Flexible | Structured'})
-    for suffix in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']:
+    for suffix in suffixes:
         f_count = counts[f'Flexible_{suffix}']
         s_count = counts[f'Structured_{suffix}']
         f_rate = rates.get(f'Flexible_{suffix}_rate', 0) or 0
@@ -495,8 +544,8 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
     results.append({'Metric': 'TOTAL', 'Value': f"{counts['Total_Flexible']} | {counts['Total_Structured']}"})
 
     # Chi-square test
-    flex_counts = [counts[f'Flexible_{s}'] for s in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']]
-    struct_counts = [counts[f'Structured_{s}'] for s in ['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']]
+    flex_counts = [counts[f'Flexible_{s}'] for s in suffixes]
+    struct_counts = [counts[f'Structured_{s}'] for s in suffixes]
 
     if sum(flex_counts) > 0 and sum(struct_counts) > 0:
         results.append({'Metric': '', 'Value': ''})
@@ -510,7 +559,7 @@ def compare_flex_vs_struct(df: pd.DataFrame, label: str = "") -> list:
         # Fisher exact for each category (Flexible vs Structured)
         results.append({'Metric': '', 'Value': ''})
         results.append({'Metric': '--- Fisher exact tests (each category) ---', 'Value': ''})
-        for i, suffix in enumerate(['consensus', 'exposed_acidic', 'buried_acidic', 'no_acidic']):
+        for i, suffix in enumerate(suffixes):
             f_yes, f_no = flex_counts[i], sum(flex_counts) - flex_counts[i]
             s_yes, s_no = struct_counts[i], sum(struct_counts) - struct_counts[i]
             try:
@@ -1556,13 +1605,17 @@ def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -
     counts = count_categories(df)
     rates = calculate_rates(counts)
 
+    suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+
     results.append({'Metric': '--- SUMO Sites Category Counts ---', 'Value': ''})
-    for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
+    for suffix in suffixes:
+        cat = f'Flexible_{suffix}'
         rate = rates.get(f'{cat}_rate', 0) or 0
         results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Flexible)'})
 
     results.append({'Metric': '', 'Value': ''})
-    for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
+    for suffix in suffixes:
+        cat = f'Structured_{suffix}'
         rate = rates.get(f'{cat}_rate', 0) or 0
         results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%} of Structured)'})
 
@@ -1591,12 +1644,14 @@ def perform_global_analysis(df: pd.DataFrame, control_df: pd.DataFrame = None) -
         control_rates = calculate_rates(control_counts)
 
         results.append({'Metric': '--- Control (All Lysines) Category Counts ---', 'Value': ''})
-        for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
+        for suffix in suffixes:
+            cat = f'Flexible_{suffix}'
             rate = control_rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Flexible)'})
 
         results.append({'Metric': '', 'Value': ''})
-        for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
+        for suffix in suffixes:
+            cat = f'Structured_{suffix}'
             rate = control_rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{control_counts[cat]} ({rate:.1%} of Structured)'})
 
@@ -1644,13 +1699,17 @@ def perform_stratified_analysis(df: pd.DataFrame, score_col: str = 'Score (SUMO 
         counts = count_categories(subset)
         rates = calculate_rates(counts)
 
+        suffixes = ['consensus', 'acidic_pm2', 'exposed_acidic', 'buried_acidic', 'no_acidic']
+
         results.append({'Metric': '--- Category Counts ---', 'Value': ''})
-        for cat in ['Flexible_consensus', 'Flexible_exposed_acidic', 'Flexible_buried_acidic', 'Flexible_no_acidic']:
+        for suffix in suffixes:
+            cat = f'Flexible_{suffix}'
             rate = rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 
         results.append({'Metric': '', 'Value': ''})
-        for cat in ['Structured_consensus', 'Structured_exposed_acidic', 'Structured_buried_acidic', 'Structured_no_acidic']:
+        for suffix in suffixes:
+            cat = f'Structured_{suffix}'
             rate = rates.get(f'{cat}_rate', 0) or 0
             results.append({'Metric': cat, 'Value': f'{counts[cat]} ({rate:.1%})'})
 

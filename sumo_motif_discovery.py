@@ -449,6 +449,115 @@ def analyze_gapped_motifs(df, positions):
     return pd.DataFrame(results)
 
 
+def analyze_sumo_consensus_motifs(df):
+    """Analyze known SUMO consensus motifs and related patterns.
+
+    SUMO consensus motifs:
+    - Forward: ψKxE (hydrophobic at -1, K at site, any at +1, acidic at +2)
+    - Inverse: ExKψ (acidic at -2, any at -1, K at site, hydrophobic at +1)
+
+    Also checks for partial matches and variations.
+    """
+    results = []
+
+    # Column names
+    col_m2 = 'AA_-2'
+    col_m1 = 'AA_-1'
+    col_site = 'AA_site'
+    col_p1 = 'AA_+1'
+    col_p2 = 'AA_+2'
+
+    required_cols = [col_m2, col_m1, col_site, col_p1, col_p2]
+    if not all(c in df.columns for c in required_cols):
+        return pd.DataFrame(results)
+
+    # Valid rows (all positions available)
+    valid_mask = df[col_m2].notna() & df[col_m1].notna() & df[col_p1].notna() & df[col_p2].notna()
+    valid_df = df[valid_mask]
+    total = len(valid_df)
+
+    if total < MIN_MOTIF_COUNT:
+        return pd.DataFrame(results)
+
+    # Define motif patterns to check
+    # Each pattern: (name, position_checks) where position_checks is dict of {col: set of valid AAs}
+    hydrophobic = set('AVILMFYWCP')
+    acidic = set('DE')
+
+    patterns = [
+        # Full consensus motifs
+        ('ψKxE (forward consensus)', {col_m1: hydrophobic, col_p2: acidic}),
+        ('ExKψ (inverse consensus)', {col_m2: acidic, col_p1: hydrophobic}),
+
+        # K-x-E pattern (acidic at +2)
+        ('K-x-E', {col_p2: {'E'}}),
+        ('K-x-D', {col_p2: {'D'}}),
+        ('K-x-[acidic]', {col_p2: acidic}),
+
+        # Hydrophobic at -1
+        ('[hydrophobic]-K', {col_m1: hydrophobic}),
+
+        # E/D at -2 (inverse start)
+        ('E-x-K', {col_m2: {'E'}}),
+        ('D-x-K', {col_m2: {'D'}}),
+        ('[acidic]-x-K', {col_m2: acidic}),
+
+        # Hydrophobic at +1 (inverse end)
+        ('K-[hydrophobic]', {col_p1: hydrophobic}),
+
+        # Combined patterns
+        ('ψK-x-E (hydro@-1, E@+2)', {col_m1: hydrophobic, col_p2: {'E'}}),
+        ('ψK-x-D (hydro@-1, D@+2)', {col_m1: hydrophobic, col_p2: {'D'}}),
+
+        # Proline patterns (often important in motifs)
+        ('P at -1', {col_m1: {'P'}}),
+        ('P at +1', {col_p1: {'P'}}),
+
+        # Double acidic
+        ('[acidic]-x-K-x-[acidic]', {col_m2: acidic, col_p2: acidic}),
+    ]
+
+    for motif_name, position_checks in patterns:
+        # Count matches
+        match_mask = pd.Series([True] * len(valid_df), index=valid_df.index)
+
+        for col, valid_aas in position_checks.items():
+            match_mask = match_mask & valid_df[col].isin(valid_aas)
+
+        count = match_mask.sum()
+
+        if count < MIN_MOTIF_COUNT:
+            continue
+
+        # Calculate expected frequency
+        exp_freq = 1.0
+        for col, valid_aas in position_checks.items():
+            col_exp = sum(BACKGROUND_AA_FREQ.get(aa, 0.05) for aa in valid_aas)
+            exp_freq *= col_exp
+
+        fold_enrich, p_val, exp_count = calculate_enrichment(count, total, exp_freq)
+
+        if fold_enrich is not None:
+            # Determine positions involved
+            pos_str = ','.join([col.replace('AA_', '').replace('site', '0').replace('+', '') for col in position_checks.keys()])
+
+            results.append({
+                'Position': pos_str,
+                'Motif': motif_name,
+                'Type': 'consensus_pattern',
+                'Observed_count': count,
+                'Expected_count': round(exp_count, 1),
+                'Total': total,
+                'Observed_freq': count / total,
+                'Expected_freq': exp_freq,
+                'Fold_enrichment': fold_enrich,
+                'P_value': p_val,
+                'Categories': 'SUMO_motif'
+            })
+
+    return pd.DataFrame(results)
+
+
 def analyze_category_patterns(df, positions):
     """Analyze patterns using amino acid categories (hydrophobic, acidic, etc.)."""
     results = []
@@ -530,6 +639,11 @@ def run_all_analyses(df, label=''):
     category = analyze_category_patterns(df, positions)
     if len(category) > 0:
         all_results.append(category)
+
+    # SUMO consensus motif patterns (K-x-E, ψKxE, etc.)
+    consensus = analyze_sumo_consensus_motifs(df)
+    if len(consensus) > 0:
+        all_results.append(consensus)
 
     if not all_results:
         return pd.DataFrame()
