@@ -490,11 +490,24 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
     res = {
         'plddt_site': None,
         'plddt_window_avg': None,
+        # Amino acids from -8 to +8
+        'aa_m8': None,
+        'aa_m7': None,
+        'aa_m6': None,
+        'aa_m5': None,
+        'aa_m4': None,
+        'aa_m3': None,
         'aa_m2': None,
         'aa_m1': None,
         'aa_site': None,
         'aa_p1': None,
         'aa_p2': None,
+        'aa_p3': None,
+        'aa_p4': None,
+        'aa_p5': None,
+        'aa_p6': None,
+        'aa_p7': None,
+        'aa_p8': None,
         # Acidic analysis
         'acidics_within_threshold': None,      # List: "D123(exp),E456"
         'distances_angstroms': None,           # List: "5.2,6.8"
@@ -543,12 +556,24 @@ def analyze_site(struct: dict, pos: int, original_pos: int = None,
     window_vals = [plddt[i] for i in range(pos - half_window, pos + half_window + 1) if i in plddt]
     res['plddt_window_avg'] = round(sum(window_vals) / len(window_vals), 2) if window_vals else None
 
-    # Flanking amino acids and site itself
+    # Flanking amino acids from -8 to +8 and site itself
+    res['aa_m8'] = seq.get(pos - 8)
+    res['aa_m7'] = seq.get(pos - 7)
+    res['aa_m6'] = seq.get(pos - 6)
+    res['aa_m5'] = seq.get(pos - 5)
+    res['aa_m4'] = seq.get(pos - 4)
+    res['aa_m3'] = seq.get(pos - 3)
     res['aa_m2'] = seq.get(pos - 2)
     res['aa_m1'] = seq.get(pos - 1)
     res['aa_site'] = seq.get(pos)
     res['aa_p1'] = seq.get(pos + 1)
     res['aa_p2'] = seq.get(pos + 2)
+    res['aa_p3'] = seq.get(pos + 3)
+    res['aa_p4'] = seq.get(pos + 4)
+    res['aa_p5'] = seq.get(pos + 5)
+    res['aa_p6'] = seq.get(pos + 6)
+    res['aa_p7'] = seq.get(pos + 7)
+    res['aa_p8'] = seq.get(pos + 8)
 
     # Determine flexibility based on window average
     if res['plddt_window_avg'] is not None:
@@ -886,11 +911,23 @@ def process_file(input_file: str, output_file: str = None):
         'mapped_pos': 'Mapped_position',
         'plddt_site': 'pLDDT_site',
         'plddt_window_avg': 'pLDDT_window_avg',
+        'aa_m8': 'AA_-8',
+        'aa_m7': 'AA_-7',
+        'aa_m6': 'AA_-6',
+        'aa_m5': 'AA_-5',
+        'aa_m4': 'AA_-4',
+        'aa_m3': 'AA_-3',
         'aa_m2': 'AA_-2',
         'aa_m1': 'AA_-1',
         'aa_site': 'AA_site',
         'aa_p1': 'AA_+1',
         'aa_p2': 'AA_+2',
+        'aa_p3': 'AA_+3',
+        'aa_p4': 'AA_+4',
+        'aa_p5': 'AA_+5',
+        'aa_p6': 'AA_+6',
+        'aa_p7': 'AA_+7',
+        'aa_p8': 'AA_+8',
         # Acidic columns
         'acidics_within_threshold': 'Acidics_within_threshold',
         'distances_angstroms': 'Distances_Angstroms',
@@ -936,11 +973,23 @@ def process_file(input_file: str, output_file: str = None):
         'Mapped_position',
         'pLDDT_site',
         'pLDDT_window_avg',
+        'AA_-8',
+        'AA_-7',
+        'AA_-6',
+        'AA_-5',
+        'AA_-4',
+        'AA_-3',
         'AA_-2',
         'AA_-1',
         'AA_site',
         'AA_+1',
         'AA_+2',
+        'AA_+3',
+        'AA_+4',
+        'AA_+5',
+        'AA_+6',
+        'AA_+7',
+        'AA_+8',
         # Acidic columns
         'Acidics_within_threshold',
         'Distances_Angstroms',

@@ -708,6 +708,155 @@ def analyze_extended_categories_by_score(df: pd.DataFrame, score_col: str = 'Sco
     return sheets
 
 
+def analyze_aa_enrichment(df: pd.DataFrame, score_col: str = 'Score (SUMO site)') -> pd.DataFrame:
+    """Analyze amino acid enrichment at each position from -8 to +8.
+
+    Returns a DataFrame with:
+    - Rows: amino acids (A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W, Y)
+    - Columns: positions (-8 to +8) with counts/rates for different subgroups
+
+    Subgroups:
+    - All sites
+    - By score group (VeryHigh, High, Medium, Low)
+    - By flexibility (Flexible, Structured)
+    """
+    # Define positions and amino acids
+    positions = list(range(-8, 9))  # -8 to +8
+    amino_acids = list('ACDEFGHIKLMNPQRSTVWY')
+
+    # Column names for positions
+    pos_cols = [f'AA_{p:+d}' if p != 0 else 'AA_site' for p in positions]
+
+    # Prepare score groups
+    df = df.copy()
+    if score_col in df.columns:
+        df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
+
+    # Define subsets
+    subsets = {
+        'All': df,
+        'Flexible': df[df['Flexible'] == 'Yes'] if 'Flexible' in df.columns else pd.DataFrame(),
+        'Structured': df[df['Structured'] == 'Yes'] if 'Structured' in df.columns else pd.DataFrame(),
+    }
+
+    if score_col in df.columns:
+        subsets['VeryHigh'] = df[df[score_col] >= SCORE_VERY_HIGH_THRESHOLD]
+        subsets['High'] = df[(df[score_col] >= SCORE_HIGH_THRESHOLD) & (df[score_col] < SCORE_VERY_HIGH_THRESHOLD)]
+        subsets['Medium'] = df[(df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df[score_col] < SCORE_HIGH_THRESHOLD)]
+        subsets['Low'] = df[df[score_col] < SCORE_MEDIUM_THRESHOLD]
+
+    # Build results - create one section per subset
+    all_rows = []
+
+    for subset_name, subset_df in subsets.items():
+        if len(subset_df) == 0:
+            continue
+
+        # Header row for this subset
+        all_rows.append({'AA': f'=== {subset_name.upper()} (N={len(subset_df)}) ===', **{col: '' for col in pos_cols}})
+
+        # Count amino acids at each position
+        for aa in amino_acids:
+            row = {'AA': aa}
+            for i, pos in enumerate(positions):
+                col_name = pos_cols[i]
+                if col_name in subset_df.columns:
+                    count = (subset_df[col_name] == aa).sum()
+                    total = subset_df[col_name].notna().sum()
+                    rate = count / total if total > 0 else 0
+                    row[col_name] = f'{count} ({rate:.1%})'
+                else:
+                    row[col_name] = 'N/A'
+            all_rows.append(row)
+
+        # Add empty row between subsets
+        all_rows.append({'AA': '', **{col: '' for col in pos_cols}})
+
+    return pd.DataFrame(all_rows)
+
+
+def analyze_aa_enrichment_detailed(df: pd.DataFrame, score_col: str = 'Score (SUMO site)') -> dict:
+    """Analyze amino acid enrichment with separate sheets for Flexible and Structured by score.
+
+    Returns dict with sheets for each combination.
+    """
+    sheets = {}
+
+    positions = list(range(-8, 9))
+    amino_acids = list('ACDEFGHIKLMNPQRSTVWY')
+    pos_cols = [f'AA_{p:+d}' if p != 0 else 'AA_site' for p in positions]
+
+    df = df.copy()
+    if score_col in df.columns:
+        df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
+
+    # Main enrichment sheet with all subgroups
+    sheets['AA_Enrichment'] = analyze_aa_enrichment(df, score_col)
+
+    # Detailed sheets: Flexible by score, Structured by score
+    for flex_type in ['Flexible', 'Structured']:
+        flex_col = flex_type
+        if flex_col not in df.columns:
+            continue
+
+        flex_df = df[df[flex_col] == 'Yes']
+        if len(flex_df) == 0:
+            continue
+
+        all_rows = []
+        all_rows.append({'AA': f'=== {flex_type.upper()} SITES - ALL (N={len(flex_df)}) ===', **{col: '' for col in pos_cols}})
+
+        # All sites of this flexibility type
+        for aa in amino_acids:
+            row = {'AA': aa}
+            for i, pos in enumerate(positions):
+                col_name = pos_cols[i]
+                if col_name in flex_df.columns:
+                    count = (flex_df[col_name] == aa).sum()
+                    total = flex_df[col_name].notna().sum()
+                    rate = count / total if total > 0 else 0
+                    row[col_name] = f'{count} ({rate:.1%})'
+                else:
+                    row[col_name] = 'N/A'
+            all_rows.append(row)
+
+        all_rows.append({'AA': '', **{col: '' for col in pos_cols}})
+
+        # By score groups
+        if score_col in df.columns:
+            score_groups = {
+                'VeryHigh': flex_df[flex_df[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+                'High': flex_df[(flex_df[score_col] >= SCORE_HIGH_THRESHOLD) & (flex_df[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
+                'Medium': flex_df[(flex_df[score_col] >= SCORE_MEDIUM_THRESHOLD) & (flex_df[score_col] < SCORE_HIGH_THRESHOLD)],
+                'Low': flex_df[flex_df[score_col] < SCORE_MEDIUM_THRESHOLD]
+            }
+
+            for group_name, group_df in score_groups.items():
+                if len(group_df) == 0:
+                    continue
+
+                all_rows.append({'AA': f'--- {group_name} (N={len(group_df)}) ---', **{col: '' for col in pos_cols}})
+
+                for aa in amino_acids:
+                    row = {'AA': aa}
+                    for i, pos in enumerate(positions):
+                        col_name = pos_cols[i]
+                        if col_name in group_df.columns:
+                            count = (group_df[col_name] == aa).sum()
+                            total = group_df[col_name].notna().sum()
+                            rate = count / total if total > 0 else 0
+                            row[col_name] = f'{count} ({rate:.1%})'
+                        else:
+                            row[col_name] = 'N/A'
+                    all_rows.append(row)
+
+                all_rows.append({'AA': '', **{col: '' for col in pos_cols}})
+
+        sheets[f'AA_Enrich_{flex_type}'] = pd.DataFrame(all_rows)
+
+    return sheets
+
+
 def compare_sites_vs_control(sites_df: pd.DataFrame, control_df: pd.DataFrame) -> list:
     """Compare SUMO sites vs all lysines (control)."""
     results = []
@@ -1593,6 +1742,11 @@ def analyze_file(input_file: str, output_file: str = None):
         # Extended categories analysis (5-category hierarchy by score groups)
         extended_cat_sheets = analyze_extended_categories_by_score(valid_df)
         for sheet_name, sheet_df in extended_cat_sheets.items():
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        # Amino acid enrichment analysis
+        aa_enrichment_sheets = analyze_aa_enrichment_detailed(valid_df)
+        for sheet_name, sheet_df in aa_enrichment_sheets.items():
             sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
         # Control comparison sheet (detailed)
