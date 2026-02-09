@@ -925,6 +925,7 @@ def analyze_acidic_distance_distribution(df: pd.DataFrame) -> pd.DataFrame:
     Calculates mean, median, std dev separately for:
     - Flexible sites
     - Structured sites (overall and broken down by helix/coil/strand)
+    - Score groups (VeryHigh, High, Medium, Low)
     """
     results = []
     results.append({'Metric': '=== ACIDIC DISTANCE DISTRIBUTION (residues from Lysine) ===', 'Value': ''})
@@ -959,67 +960,165 @@ def analyze_acidic_distance_distribution(df: pd.DataFrame) -> pd.DataFrame:
         arr = np.array(distances_list)
         return np.mean(arr), np.median(arr), np.std(arr)
 
-    # Overall stats
-    all_distances = []
-    for val in df[positions_col].dropna():
-        all_distances.extend(extract_distances(val))
+    def analyze_subset(subset_df, label):
+        """Analyze a subset and return results list."""
+        res = []
+        distances = []
+        for val in subset_df[positions_col].dropna():
+            distances.extend(extract_distances(val))
 
-    if all_distances:
-        mean, median, std = calc_stats(all_distances)
-        results.append({'Metric': '--- ALL SITES ---', 'Value': ''})
-        results.append({'Metric': 'N acidics', 'Value': len(all_distances)})
-        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
-        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
-        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
-        results.append({'Metric': '', 'Value': ''})
+        if distances:
+            mean, median, std = calc_stats(distances)
+            res.append({'Metric': f'--- {label} ---', 'Value': ''})
+            res.append({'Metric': 'N sites', 'Value': len(subset_df)})
+            res.append({'Metric': 'N acidics', 'Value': len(distances)})
+            res.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
+            res.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
+            res.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+            res.append({'Metric': '', 'Value': ''})
+        return res
+
+    # Overall stats
+    results.extend(analyze_subset(df, 'ALL SITES'))
 
     # Flexible sites
     flex_df = df[df['Flexible'] == 'Yes']
-    flex_distances = []
-    for val in flex_df[positions_col].dropna():
-        flex_distances.extend(extract_distances(val))
-
-    if flex_distances:
-        mean, median, std = calc_stats(flex_distances)
-        results.append({'Metric': '--- FLEXIBLE SITES ---', 'Value': ''})
-        results.append({'Metric': 'N acidics', 'Value': len(flex_distances)})
-        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
-        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
-        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
-        results.append({'Metric': '', 'Value': ''})
+    results.extend(analyze_subset(flex_df, 'FLEXIBLE SITES'))
 
     # Structured sites - overall
     struct_df = df[df['Structured'] == 'Yes']
-    struct_distances = []
-    for val in struct_df[positions_col].dropna():
-        struct_distances.extend(extract_distances(val))
-
-    if struct_distances:
-        mean, median, std = calc_stats(struct_distances)
-        results.append({'Metric': '--- STRUCTURED SITES (overall) ---', 'Value': ''})
-        results.append({'Metric': 'N acidics', 'Value': len(struct_distances)})
-        results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
-        results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
-        results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
-        results.append({'Metric': '', 'Value': ''})
+    results.extend(analyze_subset(struct_df, 'STRUCTURED SITES (overall)'))
 
     # Structured sites by secondary structure
     ss_col = 'Secondary_structure'
     if ss_col in df.columns:
         for ss_type in ['helix', 'strand', 'coil']:
             ss_df = struct_df[struct_df[ss_col] == ss_type]
-            ss_distances = []
-            for val in ss_df[positions_col].dropna():
-                ss_distances.extend(extract_distances(val))
+            results.extend(analyze_subset(ss_df, f'STRUCTURED - {ss_type.upper()}'))
 
-            if ss_distances:
-                mean, median, std = calc_stats(ss_distances)
-                results.append({'Metric': f'--- STRUCTURED - {ss_type.upper()} ---', 'Value': ''})
-                results.append({'Metric': 'N acidics', 'Value': len(ss_distances)})
-                results.append({'Metric': 'Mean distance (residues)', 'Value': f'{mean:.2f}'})
-                results.append({'Metric': 'Median distance', 'Value': f'{median:.1f}'})
-                results.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
-                results.append({'Metric': '', 'Value': ''})
+    # By score groups
+    score_col = 'Score (SUMO site)'
+    if score_col in df.columns:
+        df_with_score = df.copy()
+        df_with_score[score_col] = pd.to_numeric(df_with_score[score_col], errors='coerce')
+
+        results.append({'Metric': '========================================', 'Value': ''})
+        results.append({'Metric': 'BY SCORE GROUPS', 'Value': ''})
+        results.append({'Metric': '========================================', 'Value': ''})
+        results.append({'Metric': '', 'Value': ''})
+
+        score_groups = {
+            'VeryHigh': df_with_score[df_with_score[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+            'High': df_with_score[(df_with_score[score_col] >= SCORE_HIGH_THRESHOLD) & (df_with_score[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
+            'Medium': df_with_score[(df_with_score[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df_with_score[score_col] < SCORE_HIGH_THRESHOLD)],
+            'Low': df_with_score[df_with_score[score_col] < SCORE_MEDIUM_THRESHOLD]
+        }
+
+        for group_name, group_df in score_groups.items():
+            if len(group_df) > 0:
+                results.extend(analyze_subset(group_df, f'SCORE: {group_name}'))
+
+    return pd.DataFrame(results)
+
+
+def analyze_acidic_distance_angstroms(df: pd.DataFrame) -> pd.DataFrame:
+    """Analyze distribution of acidic distances (in Angstroms) from lysine site.
+
+    Calculates mean, median, std dev separately for:
+    - Flexible sites
+    - Structured sites (overall and broken down by helix/coil/strand)
+    - Score groups (VeryHigh, High, Medium, Low)
+    """
+    results = []
+    results.append({'Metric': '=== ACIDIC DISTANCE DISTRIBUTION (Angstroms) ===', 'Value': ''})
+    results.append({'Metric': 'Note: Distance in Angstroms (Cα-Cα)', 'Value': ''})
+    results.append({'Metric': '', 'Value': ''})
+
+    # Column to get Angstrom distances
+    angstrom_col = 'Distances_Angstroms'
+    if angstrom_col not in df.columns:
+        results.append({'Metric': 'Error', 'Value': 'Distances_Angstroms column not found'})
+        return pd.DataFrame(results)
+
+    def extract_distances(val):
+        """Extract numeric distances from angstrom string like '5.2(exp),6.8,7.1'."""
+        if pd.isna(val) or val == '':
+            return []
+        distances = []
+        for part in str(val).split(','):
+            # Remove (exp) marker and convert to float
+            part_clean = part.replace('(exp)', '').strip()
+            try:
+                d = float(part_clean)
+                distances.append(d)
+            except:
+                pass
+        return distances
+
+    def calc_stats(distances_list):
+        """Calculate mean, median, std for a list of distances."""
+        if not distances_list:
+            return None, None, None
+        arr = np.array(distances_list)
+        return np.mean(arr), np.median(arr), np.std(arr)
+
+    def analyze_subset(subset_df, label):
+        """Analyze a subset and return results list."""
+        res = []
+        distances = []
+        for val in subset_df[angstrom_col].dropna():
+            distances.extend(extract_distances(val))
+
+        if distances:
+            mean, median, std = calc_stats(distances)
+            res.append({'Metric': f'--- {label} ---', 'Value': ''})
+            res.append({'Metric': 'N sites', 'Value': len(subset_df)})
+            res.append({'Metric': 'N acidics', 'Value': len(distances)})
+            res.append({'Metric': 'Mean distance (Å)', 'Value': f'{mean:.2f}'})
+            res.append({'Metric': 'Median distance (Å)', 'Value': f'{median:.2f}'})
+            res.append({'Metric': 'Std dev', 'Value': f'{std:.2f}'})
+            res.append({'Metric': '', 'Value': ''})
+        return res
+
+    # Overall stats
+    results.extend(analyze_subset(df, 'ALL SITES'))
+
+    # Flexible sites
+    flex_df = df[df['Flexible'] == 'Yes']
+    results.extend(analyze_subset(flex_df, 'FLEXIBLE SITES'))
+
+    # Structured sites - overall
+    struct_df = df[df['Structured'] == 'Yes']
+    results.extend(analyze_subset(struct_df, 'STRUCTURED SITES (overall)'))
+
+    # Structured sites by secondary structure
+    ss_col = 'Secondary_structure'
+    if ss_col in df.columns:
+        for ss_type in ['helix', 'strand', 'coil']:
+            ss_df = struct_df[struct_df[ss_col] == ss_type]
+            results.extend(analyze_subset(ss_df, f'STRUCTURED - {ss_type.upper()}'))
+
+    # By score groups
+    score_col = 'Score (SUMO site)'
+    if score_col in df.columns:
+        df_with_score = df.copy()
+        df_with_score[score_col] = pd.to_numeric(df_with_score[score_col], errors='coerce')
+
+        results.append({'Metric': '========================================', 'Value': ''})
+        results.append({'Metric': 'BY SCORE GROUPS', 'Value': ''})
+        results.append({'Metric': '========================================', 'Value': ''})
+        results.append({'Metric': '', 'Value': ''})
+
+        score_groups = {
+            'VeryHigh': df_with_score[df_with_score[score_col] >= SCORE_VERY_HIGH_THRESHOLD],
+            'High': df_with_score[(df_with_score[score_col] >= SCORE_HIGH_THRESHOLD) & (df_with_score[score_col] < SCORE_VERY_HIGH_THRESHOLD)],
+            'Medium': df_with_score[(df_with_score[score_col] >= SCORE_MEDIUM_THRESHOLD) & (df_with_score[score_col] < SCORE_HIGH_THRESHOLD)],
+            'Low': df_with_score[df_with_score[score_col] < SCORE_MEDIUM_THRESHOLD]
+        }
+
+        for group_name, group_df in score_groups.items():
+            if len(group_df) > 0:
+                results.extend(analyze_subset(group_df, f'SCORE: {group_name}'))
 
     return pd.DataFrame(results)
 
@@ -1296,7 +1395,11 @@ def analyze_file(input_file: str, output_file: str = None):
 
         # Acidic distance distribution analysis (in residue positions)
         acidic_dist_df = analyze_acidic_distance_distribution(valid_df)
-        acidic_dist_df.to_excel(writer, sheet_name='Acidic_Distance_Dist', index=False)
+        acidic_dist_df.to_excel(writer, sheet_name='Acidic_Dist_Residues', index=False)
+
+        # Acidic distance distribution analysis (in Angstroms)
+        acidic_angstrom_df = analyze_acidic_distance_angstroms(valid_df)
+        acidic_angstrom_df.to_excel(writer, sheet_name='Acidic_Dist_Angstroms', index=False)
 
         # Hydrophobic analysis
         hp_analysis_df = analyze_hydrophobic_features(valid_df)
