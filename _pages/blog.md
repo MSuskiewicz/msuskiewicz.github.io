@@ -11,6 +11,25 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+A few more thoughts on LLMs in science (16/02/2025)
+------
+Returning to the topic of using frontier LLMs for maths, after the recent 1stproof initiative (real research questions by mathematicians announced to test AI). A few observations:
+
+1) One striking thing is laymen who attempted solving problems without knowing any math, believed their solutions must be true because the models were convinced (even when crosschecking with official solutions) - while they weren't. They were even more convinced when formalising their solutions in Lean and getting a validation, but formalisations often seemed nonsensical too.
+
+2) Another thing one could see - or perhaps more 'sense' - was everybody (the laymen participating in the contest, the audience) hoping experts would look at and comment on the various solutions. But the experts don't necessarily have time to go through all that, so the things remain unresolved, uncertain. With AI and its potential for research slop, the value of experts who can deeply understand and evaluate things only increases.
+
+3) OpenAI apparently cracked some problems with their 'internal model'. They announced it immediately and used it for PR. Reactions as expected: AI does maths better than humans etc. etc. But they used human supervision and wouldn't share transcripts — while 1stproof was meant for unsupervised runs.
+
+4) Frontier LLMs for maths (and other areas of science) seem to work mostly where similar approaches and ideas were used somewhere in the literature but need to be combined. AI as a great semantic search for ideas, but you don't know if what it proposes makes sense. It takes an expert to ask a question and navigate answers.
+
+Overall, AI both impressive and disappointing; the science (maths in this case) both changing profoundly and real human expertise becoming even more valuable; AI companies making real progress but also constantly manipulating reality, distorting the public view of what science is about.
+
+I don't envy people who start their PhDs now. What they should be trying to do — I think — is to first become confident experts in certain things, and this might involve using as little AI as possible not to become dependent or have their view distorted.
+
+P.S. I know very little about maths and I'm following the current debates purely as a layman, who tries to draw parallels with biochemistry.
+
+
 Parallels between machine learning in maths and biology? (20/01/2025)
 ------
 I find the current developments in AI's use in mathematics interesting (see e.g. some recent posts by Terrence Tao on <a href="https://mathstodon.xyz/@tao">mathstodon.xyz/@tao</a>, one of which I paste below). It does feel a bit like 'an AlphaFold moment' in the sense that suddenly you don't need hype because there is a real thing happening, with 'AI' - or shall we call it machine learning/automation? - providing new possibilities in this particular branch of research (another area where this seems to be happening is some types of coding). 
