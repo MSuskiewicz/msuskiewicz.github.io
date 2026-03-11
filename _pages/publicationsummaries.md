@@ -13,8 +13,6 @@ Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., S
 Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. *Nature Structural & Molecular Biology* 32 (2025).<br />
 <a href="https://www.nature.com/articles/s41594-025-01715-1">Link to the article</a>
 
-Here's the corrected version:
-
 In a recent collaborative study, we investigated FAM118 proteins, noncanonical sirtuins that form filaments and process NAD in human and other vertebrate cells. The seven canonical human sirtuins, SIRT1-SIRT7, are well-studied enzymes associated with protein deacetylation activity. However, humans have two more poorly characterised sirtuin-fold proteins, FAM118B and FAM118A. In this work, we studied their evolution, structure, and molecular function.
 
 In brief, we show that human FAM118s are closer to ancestral bacterial sirtuins than to canonical human SIRTs; that they assemble into filaments <i>in vitro</i> and in cells; that they have NAD processing (likely NAD-hydrolysis) activity; and that mixing the two paralogues, FAM118B and FAM118A, boosts activity.
