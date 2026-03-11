@@ -6,20 +6,68 @@ main:
 
   - title: "Projects"
     url: /projects/
-  
+
   - title: "Group"
     url: /group/
 
   - title: "Publications"
-    url: /publications/    
+    url: /publications/
 
   - title: "Publication summaries"
-    url: /publicationsummaries/    
+    url: /publicationsummaries/
 
   - title: "Blog"
-    url: /blog/    
- 
+    url: /blog/
+
   - title: "Contact and CV"
     url: /cv/
+
+# French navigation
+fr_main:
+
+  - title: "Recherche"
+    url: /fr/research/
+
+  - title: "Projets"
+    url: /fr/projects/
+
+  - title: "Groupe"
+    url: /fr/group/
+
+  - title: "Publications"
+    url: /fr/publications/
+
+  - title: "Résumés de publications"
+    url: /fr/publicationsummaries/
+
+  - title: "Blog"
+    url: /fr/blog/
+
+  - title: "Contact et CV"
+    url: /fr/cv/
+
+# Polish navigation
+pl_main:
+
+  - title: "Badania"
+    url: /pl/research/
+
+  - title: "Projekty"
+    url: /pl/projects/
+
+  - title: "Grupa"
+    url: /pl/group/
+
+  - title: "Publikacje"
+    url: /pl/publications/
+
+  - title: "Streszczenia publikacji"
+    url: /pl/publicationsummaries/
+
+  - title: "Blog"
+    url: /pl/blog/
+
+  - title: "Kontakt i CV"
+    url: /pl/cv/
 
  

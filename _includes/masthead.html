@@ -1,13 +1,31 @@
 {% include base_path %}
 
+{% assign current_lang = 'en' %}
+{% if page.url contains '/fr/' %}
+  {% assign current_lang = 'fr' %}
+{% elsif page.url contains '/pl/' %}
+  {% assign current_lang = 'pl' %}
+{% endif %}
+
+{% if current_lang == 'fr' %}
+  {% assign nav_main = site.data.navigation.fr_main %}
+  {% assign home_url = '/fr/' %}
+{% elsif current_lang == 'pl' %}
+  {% assign nav_main = site.data.navigation.pl_main %}
+  {% assign home_url = '/pl/' %}
+{% else %}
+  {% assign nav_main = site.data.navigation.main %}
+  {% assign home_url = '/' %}
+{% endif %}
+
 <div class="masthead">
   <div class="masthead__inner-wrap">
     <div class="masthead__menu">
       <nav id="site-nav" class="greedy-nav">
         <button><div class="navicon"></div></button>
         <ul class="visible-links">
-          <li class="masthead__menu-item masthead__menu-item--lg"><a href="{{ base_path }}/">{{ site.title }}</a></li>
-          {% for link in site.data.navigation.main %}
+          <li class="masthead__menu-item masthead__menu-item--lg"><a href="{{ base_path }}{{ home_url }}">{{ site.title }}</a></li>
+          {% for link in nav_main %}
             {% if link.url contains 'http' %}
               {% assign domain = '' %}
               {% else %}
@@ -18,6 +36,21 @@
         </ul>
         <ul class="hidden-links hidden"></ul>
       </nav>
+      <div class="language-switcher">
+        {% if current_lang == 'en' %}
+          <span class="lang-btn lang-active">EN</span>
+          <a href="{{ base_path }}{{ page.url | prepend: '/fr' }}" class="lang-btn">FR</a>
+          <a href="{{ base_path }}{{ page.url | prepend: '/pl' }}" class="lang-btn">PL</a>
+        {% elsif current_lang == 'fr' %}
+          <a href="{{ base_path }}{{ page.url | remove_first: '/fr' }}" class="lang-btn">EN</a>
+          <span class="lang-btn lang-active">FR</span>
+          <a href="{{ base_path }}{{ page.url | replace_first: '/fr/', '/pl/' }}" class="lang-btn">PL</a>
+        {% else %}
+          <a href="{{ base_path }}{{ page.url | remove_first: '/pl' }}" class="lang-btn">EN</a>
+          <a href="{{ base_path }}{{ page.url | replace_first: '/pl/', '/fr/' }}" class="lang-btn">FR</a>
+          <span class="lang-btn lang-active">PL</span>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>
