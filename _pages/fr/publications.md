@@ -74,4 +74,4 @@ Les publications sont listées dans un ordre chronologique inverse, de la plus r
 </ol>
 
 
-Les publications les plus récentes peuvent manquer — veuillez consulter <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">mon profil Google Scholar</a>.
+Les publications les plus récentes peuvent manquer – veuillez consulter <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">mon profil Google Scholar</a>.
