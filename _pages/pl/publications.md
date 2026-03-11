@@ -74,4 +74,4 @@ Publikacje wymienione są w odwróconym porządku chronologicznym, od najnowszej
 </ol>
 
 
-Najnowszych publikacji może brakować — proszę odwiedzić <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">mój profil Google Scholar</a>.
+Najnowszych publikacji może brakować – proszę odwiedzić <a href="https://scholar.google.ca/citations?user=Xsix4w8AAAAJ&hl=en">mój profil Google Scholar</a>.
