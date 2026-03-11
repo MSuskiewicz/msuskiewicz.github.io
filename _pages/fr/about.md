@@ -5,11 +5,11 @@ author_profile: true
 ---
 Merci de visiter mon site personnel (mais surtout professionnel).
 
-Je suis biologiste structurel et moléculaire et biochimiste, spécialisé dans les modifications et les interactions des protéines. Je travaille en tant que chercheur au Centre de Biophysique Moléculaire (CBM) à Orléans. Le CBM est une unité du CNRS (Centre National de la Recherche Scientifique) dont la mission est de mener des recherches à l'interface de la biologie, de la chimie et de la physique. Il est situé en périphérie de la ville d'Orléans, dans la région du Val de Loire.
+Je suis biologiste structural et moléculaire et biochimiste, spécialisé dans les modifications et les interactions des protéines. Je travaille en tant que chercheur au Centre de Biophysique Moléculaire (CBM) à Orléans. Le CBM est une unité du CNRS (Centre National de la Recherche Scientifique) dont la mission est de mener des recherches à l'interface de la biologie, de la chimie et de la physique. Il est situé en périphérie de la ville d'Orléans, dans la région du Val de Loire.
 
-Au CBM, je supervise le projet ERC Starting Grant « SUMOwriteNread », dédié aux mécanismes moléculaires d'une modification post-traductionnelle des protéines (PTM) appelée SUMOylation. Je suis également membre d'un groupe de recherche, « Modifications post-traductionnelles des protéines et réparation de l'ADN : structure, fonctions et dynamique », dont je suis co-responsable depuis peu, aux côtés de son responsable de longue date, Bertrand Castaing.
+Au CBM, je supervise le projet ERC Starting Grant « SUMOwriteNread », dédié aux mécanismes moléculaires d'une modification post-traductionnelle des protéines (PTM) appelée SUMOylation. Je suis également membre d'un groupe de recherche, « Modifications post-traductionnelles des protéines et réparation de l'ADN : structure, fonctions et dynamique », dont je suis responsable depuis peu, aux côtés de son responsable de longue date, Bertrand Castaing, qui est maintenant coresponsable.
 
-Je suis également affilié au programme ATIP-Avenir et à Le Studium Loire Valley Institute for Advanced Studies.
+Je suis également 'labelisé' par le programme ATIP-Avenir et à Le Studium Loire Valley Institute for Advanced Studies.
 
 <img src="https://msuskiewicz.github.io/images/orleans.png" width="550" />
 
