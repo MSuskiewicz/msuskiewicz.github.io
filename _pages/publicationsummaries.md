@@ -7,6 +7,27 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
+Filament formation and NAD processing by noncanonical human FAM118 sirtuins 
+------
+Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉<br />
+Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. *Nature Structural & Molecular Biology* 32 (2025).<br />
+<a href="https://www.nature.com/articles/s41594-025-01715-1">Link to the article</a>
+
+Here's the corrected version:
+
+In a recent collaborative study, we investigated FAM118 proteins, noncanonical sirtuins that form filaments and process NAD in human and other vertebrate cells. The seven canonical human sirtuins, SIRT1-SIRT7, are well-studied enzymes associated with protein deacetylation activity. However, humans have two more poorly characterised sirtuin-fold proteins, FAM118B and FAM118A. In this work, we studied their evolution, structure, and molecular function.
+
+In brief, we show that human FAM118s are closer to ancestral bacterial sirtuins than to canonical human SIRTs; that they assemble into filaments <i>in vitro</i> and in cells; that they have NAD processing (likely NAD-hydrolysis) activity; and that mixing the two paralogues, FAM118B and FAM118A, boosts activity.
+
+This was a close collaboration with the Ivan Ahel lab (Dunn School, Oxford), the Sébastien Huet lab (IGDR Rennes), and other teams. All authors were important, but I would like to highlight Domagoj Baretić and Sophia Missoury (with Franck Coste) for their cryoEM and other assays, and Sébastien Huet and his team for their great optical assays. I also highlight Andreja for her phylogenetic analysis, Karishma for NAD processing assays, and above all Ivan for his intuition, energy, and generosity.
+
+FAM118s had long interested Ivan (my postdoc PI), who, as in many other cases, had a good intuition about their importance. They have been a difficult biochemical target, though. We as a team - with out interest in protein self-assembly - brought in the observation that they homooligomerise into filaments, an insight explored collaboratively in this study.
+
+I would also like to highlight <a href="https://www.science.org/doi/10.1126/science.adr8536">a recent publication by Bernheim, Poirier, and colleagues in <i>Science</i></a>, showing that FAM118B, which they term "SIRal", is essential for innate immune response in mammalian cellular models; they also have great phylogenetic analysis and insights into biochemistry.
+
+I thank our great labs (CBM UPR4301, the Dunn School, IGDR Rennes, and the Pasteur Institute) as well as funding sources including the Agence Nationale de la Recherche, the ERC, and the Wellcome Trust. I also thank Nature Structural & Molecular Biology for a very constructive revision process.
+
+
 RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases
 ------
 Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, *Suskiewicz, M.J.✉*<br />
@@ -25,10 +46,11 @@ Lastly, Lucija performed nice in-vitro ubiquitylation assays showing that the V9
 
 Overall, this side project is related to our ongoing interest in how multimerisation of substrates and ligases - particularly filament formation - affects SUMOylation and ubiquitylation processes. I thank all colleagues and collaborators involved in this project and You for your attention ;).
 
-This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). We did go on <a href="https://febs.onlinelibrary.wiley.com/doi/10.1111/febs.17177">the FEBS J cover, but with a different image</a>. Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half.
+This is a cover design that wasn't accepted, showing SIAH1 multimers on top of cells (SIAH1 red, actin green). Of note, we were not able to visualise SIAH1 chains in vitro, as we could only purify N- or C-term halves of SIAH1 separately: the blue chains are models made from combined dimeric structures of each half. 
 
 <img src="https://msuskiewicz.github.io/images/Design4.png" width='400' />
 
+Actually, we did go on <a href="https://febs.onlinelibrary.wiley.com/doi/10.1111/febs.17177">the FEBS J cover in the end, but with a different image</a>. 
 
 Dynamic BTB-domain filaments promote clustering of ZBTB proteins
 ------
