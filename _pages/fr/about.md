@@ -9,7 +9,7 @@ Je suis biologiste structural et moléculaire et biochimiste, spécialisé dans 
 
 Au CBM, je supervise le projet ERC Starting Grant « SUMOwriteNread », dédié aux mécanismes moléculaires d'une modification post-traductionnelle des protéines (PTM) appelée SUMOylation. Je suis également membre d'un groupe de recherche, « Modifications post-traductionnelles des protéines et réparation de l'ADN : structure, fonctions et dynamique », dont je suis responsable depuis peu, aux côtés de son responsable de longue date, Bertrand Castaing, qui est maintenant coresponsable.
 
-Je suis également 'labelisé' par le programme ATIP-Avenir et à Le Studium Loire Valley Institute for Advanced Studies.
+Je suis également 'labelisé' par le programme ATIP-Avenir, et j'étais membre affilié du Studium Loire Valley Institute for Advanced Studies.
 
 <img src="https://msuskiewicz.github.io/images/orleans.png" width="550" />
 
