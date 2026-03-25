@@ -11,7 +11,15 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
-A few more thoughts on LLMs in science (16/02/2025)
+Native holdup for protein:DNA interactions (25/03/2026)
+------
+Just finished reading <a href="https://febs.onlinelibrary.wiley.com/doi/10.1111/febs.70483">this lovely paper by Boglarka Zambo, Gergő Gógl, Gilles Travé, and collaborators, describing a new technique for quantifying transcription factor:DNA binding without protein purification</a>. We have been interested in transcription factors for some time (see especially <a href="https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00476-3">this article on ZBTB transcription factors</a>) - and found them very difficult to produce recombinantly in full-length forms - so this technique is super exciting to read about.
+If you haven't heard of native holdup assays - developed by Gilles Travé and coworkers, including Gergo and Boglarka - they measure binding between molecules A and B by quantifying how much molecule A is depleted after incubation with immobilised B. It's basically the opposite of a pulldown, and, by being more specific without the need for washing steps, it's more quantitative and compatible with transient interactions. You probe the levels of A before and after depletion with mass spec. or any other suitable technique, e.g. western blot. A holdup with a single concentration of immobilised B is in theory enough, but a titration with multiple B concentrations is more accurate.
+So here the authors extend the native holdup approach to protein:DNA interactions, which requires some finetuning. The beauty: no need to purify your protein - it can be present in cell lysate. A gamechanger for transcription factors, so difficult to purify in full-length forms. You simply measure transcription factor levels in cell lysate after incubation with known concentrations of immobilised annealed DNA oligos. At least on paper, this looks easy and potentially so informative.
+Look at <a href="https://febs.onlinelibrary.wiley.com/doi/10.1111/febs.70483#febs70483-fig-0006">figure 6 in the paper (panels A and B)</a>: GATA1 levels in K562 extract are probed by WB after incubation with increasing concentrations of immobilised cognate or mutated DNAs. High DNA concentrations deplete the TF; with less DNA, more TF remains. You quantify the bands to get binding curves with apparent Kd. You see that one DNA probe (51) binds tighter than the other (4945) - if I remember correctly, the difference is in the number of GATA1 binding motifs. Consistently, mutated versions of the DNA probes deplete less, giving higher Kds. And in the next figure, they repeat the same experiment but with lysates of cells expressing WT and mutants GATA1s to compare their affinities for the same DNA probes.
+One of these beautiful, elegant papers. And it's nice to see it in the FEBS Journal! Congratulations to Boglarka, Gergő, and all the authors!
+
+A few more thoughts on LLMs in science (16/02/2026)
 ------
 Returning to the topic of using frontier LLMs for maths, after the recent 1stproof initiative (real research questions by mathematicians announced to test AI). A few observations:
 
@@ -30,7 +38,7 @@ I don't envy people who start their PhDs now. What they should be trying to do �
 P.S. I know very little about maths and I'm following the current debates purely as a layman, who tries to draw parallels with biochemistry.
 
 
-Parallels between machine learning in maths and biology? (20/01/2025)
+Parallels between machine learning in maths and biology? (20/01/2026)
 ------
 I find the current developments in AI's use in mathematics interesting (see e.g. some recent posts by Terrence Tao on <a href="https://mathstodon.xyz/@tao">mathstodon.xyz/@tao</a>, one of which I paste below). It does feel a bit like 'an AlphaFold moment' in the sense that suddenly you don't need hype because there is a real thing happening, with 'AI' - or shall we call it machine learning/automation? - providing new possibilities in this particular branch of research (another area where this seems to be happening is some types of coding). 
 
