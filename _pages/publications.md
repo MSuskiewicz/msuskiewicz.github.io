@@ -9,18 +9,22 @@ Publications are listed in an inverse chronological order from the most recent t
 
 ✱ – equal contribution; ✉ – corresponding author; 🅡 – review; 🅝 – news & views; 🅟 – pre-print; 🅒 – book chapter
 
-<ol start="31" reversed>
-  <li>Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. Nature Structural & Molecular Biology 32 (2025).</li>
+<ol start="33" reversed>
+  <li>Schützenhofer, K., Laker, E., Tsang, K., Baretić, D., Suskiewicz, M.J., Zobel, F.F.H., Simmons, M.D.R., Chatrin, C., Smith, R.✉ & Ahel, I.✉ PARP1-specific inhibitor displays PARP1-detrapping activity. Cell Reports 45(5), 117350 (2026).</li>
+
+  <li>Lu, Y., Tang, L., Strømland, Ø., Chatrin, C., Zhu, K., Munnur, D., Groslambert, J., Mikolčević, P., Schüler, H., Timinszky, G., Gabant, G., Suskiewicz, M.J., Mikoč, A., Aucagne, V., Ahel, D., Liu, Q. & Ahel, I.✉ Reversible RNA ADP-ribosylation on uracil bases. Nucleic Acids Research 54(6), gkag289 (2026).</li>
+
+  <li>Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM118 sirtuins. Nature Structural & Molecular Biology 32 (2025).</li>
 
   <li>Cisse, E.H., Goffinont, S., Castaing, B., Suskiewicz, M.J.✉ Production and purification of SUMO-UBC9 and SUMO-RANGAP1CTD. In: SUMO: Methods and Protocols (Methods in Molecular Biology, vol. 2957), pp. 67–82 (2025). 🅒</li>
 
-  <li>Mishra, A., Goffinont, S., Coste, F., Cisse, E.H., Mance, L., Castaing, B., Suskiewicz, M.J.✉ Fusion Protein-Assisted Crystallization of Human SUMO1. Proteins: Structure, Function, and Bioinformatics, 2025 May 23., doi: 10.1002/prot.26838</li>
+  <li>Mishra, A., Goffinont, S., Coste, F., Cisse, E.H., Mance, L., Castaing, B., Suskiewicz, M.J.✉ Fusion Protein-Assisted Crystallization of Human SUMO1. Proteins: Structure, Function, and Bioinformatics 93, pp.1767-1779 (2025). doi: 10.1002/prot.26838</li>
 
-  <li>Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, Suskiewicz, M.J.✉ RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases. The FEBS Journal, 5/2/2025.</li>
+  <li>Coste, F.✉,  Mishra, A., Chapuis, C., Mance, L., Pukało, Z., Bigot, N., Goffinont, S., Gaudon, V., Garnier, N., Talhaoui, I., Castaing, B., Huet, S.✉, Suskiewicz, M.J.✉ RING dimerisation drives higher-order organisation of SINA/SIAH E3 ubiquitin ligases. The FEBS Journal 292(11), pp.2784-2805 (2025).</li>
 
   <li>Bergoug, M., Mosrin, C., Serrano, A., Godin, F., Doudeau, M., Dundović, I., Goffinont, S., Normand, T., Suskiewicz, M.J., Vallée, B. and Bénédetti, H.✉ An Atypical Mechanism of SUMOylation of Neurofibromin SecPH Domain Provides New Insights into SUMOylation Site Selection. The Journal of Molecular Biology, 436(22), 168768.</li>
 
-  <li>Zhu, K.✉, Chatrin, C., Suskiewicz, M. J., Aucagne, V., Ahel, D.✉, Ahel, I.✉ Ubiquitylation of nucleic acids by specific DELTEX E3 ligases. EMBO Reports (accepted 08/2024).</li>
+  <li>Zhu, K.✉, Chatrin, C., Suskiewicz, M. J., Aucagne, V., Foster, B., Kessler, B. M., Gibbs-Seymour, I., Ahel, D.✉ & Ahel, I.✉ Ubiquitylation of nucleic acids by DELTEX ubiquitin E3 ligase DTX3L. EMBO Reports 25(10), pp.4172-4189 (2024).</li>
 
   <li>Mance, L., Bigot, N., Sánchez, E.Z., Coste, F.✉, Martín-González, N., Zentout, S., Biliškov, M., Pukało, Z., Mishra, A., Chapuis, C., Arteni, A.A., Lateur, A., Goffinont, S., Gaudon, V., Talhaoui, I., Casuso, I., Beaufour, M., Garnier, N., Artzner, F., Cadene, M., Huet, S., Castaing, B., & Suskiewicz, M.J.✉ Dynamic BTB-domain filaments promote clustering of ZBTB proteins. Molecular Cell, 84(13), pp.2490-2510, (2024).</li>
 
