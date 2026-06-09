@@ -10,7 +10,7 @@ Publikacje wymienione są w odwróconym porządku chronologicznym, od najnowszej
 ✱ – równy wkład; ✉ – autor korespondencyjny; 🅡 – artykuł przeglądowy; 🅝 – news & views; 🅟 – preprint; 🅒 – rozdział w książce
 
 <ol start="33" reversed>
-  <li>Schützenhofer, K., Laker, E., Tsang, K., Baretić, D., Suskiewicz, M.J., Zobel, F.F.H., Simmons, M.D.R., Chatrin, C., Smith, R. & Ahel, I.✉ PARP1-specific inhibitor displays PARP1-detrapping activity. Cell Reports 45(5) (2026).</li>
+  <li>Schützenhofer, K., Laker, E., Tsang, K., Baretić, D., Suskiewicz, M.J., Zobel, F.F.H., Simmons, M.D.R., Chatrin, C., Smith, R.✉ & Ahel, I.✉ PARP1-specific inhibitor displays PARP1-detrapping activity. Cell Reports 45(5), 117350 (2026).</li>
 
   <li>Lu, Y., Tang, L., Strømland, Ø., Chatrin, C., Zhu, K., Munnur, D., Groslambert, J., Mikolčević, P., Schüler, H., Timinszky, G., Gabant, G., Suskiewicz, M.J., Mikoč, A., Aucagne, V., Ahel, D., Liu, Q. & Ahel, I.✉ Reversible RNA ADP-ribosylation on uracil bases. Nucleic Acids Research 54(6), gkag289 (2026).</li>
 
