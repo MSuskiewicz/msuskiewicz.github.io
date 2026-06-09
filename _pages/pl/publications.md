@@ -9,8 +9,12 @@ Publikacje wymienione są w odwróconym porządku chronologicznym, od najnowszej
 
 ✱ – równy wkład; ✉ – autor korespondencyjny; 🅡 – artykuł przeglądowy; 🅝 – news & views; 🅟 – preprint; 🅒 – rozdział w książce
 
-<ol start="31" reversed>
-  <li>Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM11_B sirtuins. Nature Structural & Molecular Biology 32 (2025).</li>
+<ol start="33" reversed>
+  <li>Schützenhofer, K., Laker, E., Tsang, K., Baretić, D., Suskiewicz, M.J., Zobel, F.F.H., Simmons, M.D.R., Chatrin, C., Smith, R. & Ahel, I.✉ PARP1-specific inhibitor displays PARP1-detrapping activity. Cell Reports 45(5) (2026).</li>
+
+  <li>Lu, Y., Tang, L., Strømland, Ø., Chatrin, C., Zhu, K., Munnur, D., Groslambert, J., Mikolčević, P., Schüler, H., Timinszky, G., Gabant, G., Suskiewicz, M.J., Mikoč, A., Aucagne, V., Ahel, D., Liu, Q. & Ahel, I.✉ Reversible RNA ADP-ribosylation on uracil bases. Nucleic Acids Research 54(6), gkag289 (2026).</li>
+
+  <li>Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉ Filament formation and NAD processing by noncanonical human FAM118 sirtuins. Nature Structural & Molecular Biology 32 (2025).</li>
 
   <li>Cisse, E.H., Goffinont, S., Castaing, B., Suskiewicz, M.J.✉ Production and purification of SUMO-UBC9 and SUMO-RANGAP1CTD. In: SUMO: Methods and Protocols (Methods in Molecular Biology, vol. 2957), pp. 67–82 (2025). 🅒</li>
 
