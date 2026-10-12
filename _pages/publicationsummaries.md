@@ -9,7 +9,7 @@ Here I will share short informal discussions of the most recent papers (and mayb
 
 A new class of inherently efficient SUMOylation substrates
 ------
-Cisse, E.H., Visticot, L., Cepa, R., Mishra, A., Coste, F., Goffinont, S., Mance, L., Battault, S., Guigneau, D., Talhaoui, I., Castaing, B., Aucagne, V., Defossez, P.-A., *Suskiewicz, M.J.*✉ <br />
+Cisse, E.H., Visticot, L., Cepa, R., Mishra, A., Coste, F., Goffinont, S., Mance, L., Battault, S., Guigneau, D., Talhaoui, I., Castaing, B., Aucagne, V., Defossez, P.-A.✉, Suskiewicz, M.J.✉ <br />
 A new class of inherently efficient SUMOylation substrates. *bioRxiv* (2026).<br />
 <a href="https://www.biorxiv.org/content/10.64898/2026.09.10.750468v1">Link to the article</a>
 
