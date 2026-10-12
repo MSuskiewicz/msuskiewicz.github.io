@@ -11,6 +11,16 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+FLI1 and other 'nucleoprotein filaments' (12/10/2026)
+------
+I’ve just read <a href="https://academic.oup.com/nar/article-abstract/53/6/gkaf205/8093172">a paper about cooperative binding of the DNA-binding domain (DBD) of FLI1 to GGAA-repeat DNA</a>, from Hou and Tsodikov (nice work!). It includes crystal structures with 2x, 3x, and 4xGGAA, as well as EMSAs and fluorescence polarisation, together showing that on repetitive DNA each FLI1 DBD copy contacts the next and the next+1, which gives rise to cooperativity and increased affinity.
+
+This results in a “nucleoprotein filament”, but the filamentation work is largely done by the repetitive DNA: without DNA, the protein is mono- or dimeric (and the weak dimerisation is mediated by a different interface than the one in the filament). This is similar to what was recently seen with cryo-EM for FOXP3 (in Sun Hur’s team’s papers, as dscussed in the post below). The contacts are weak and likely fairly adaptable. They are not enough to make two protein copies stick to each other without DNA, but they help the protein bind repetitive DNA cooperatively. This is likely a common phenomenon on DNA repeats (and there are plenty of those in the genome). On more complex DNA substrates, hetero-interactions between the DBDs of different TFs might prevail -- unless, and we think this might be fairly common too -- a transcription factor has some DNA-independent oligomerisation, too.
+
+In the case of FLI1, cooperative binding to repetitive DNA is necessary for oncogenicity but is not sufficient. Cancer (Ewing sarcoma) happens when FLI1 gets fused to a Gln/Tyr-rich domain of EWS that provides additional interactions. This might result in some kind of higher-order 'condensates of filaments'. But the essentiality of repetitive DNA and of the FLI1 DBD for oncogenicity suggests it is the protein:DNA filaments that 'nucleate' everything.
+
+I’m currently obsessively reading about filaments, multimers, condensates, and DNA. I find it fascinating how high-affinity DBD:consensus-motif interactions are just the tip of the iceberg. The underwater part of the iceberg are all the more elusive interactions, driven partly by DNA patterns and partly by protein homo- and heteromultimerisation propensities.
+
 Review about FOXP3 and AIRE (14/08/2026)
 ------
 I was so happy to read <a href="https://www.nature.com/articles/s41590-026-02483-w">this review</a> in full yesterday. The less time I have for reading, the more I value the reading - it feels like with every sentence you learn something and start having your own questions and ideas. At least when a paper (or a review) is solid and inspiring, like this one is. I have been following the work from the Sun Hur lab on FOXP3 and AIRE, but it's nice to have it gathered and discussed together - including the very recent papers I missed. FOXP3 and AIRE are immunity-related transcriptional regulators, and both homo-multimerise in interesting ways. I am interested in multimerising, filament-forming proteins - especially transcription factors - so all this is super inspiring to me.
