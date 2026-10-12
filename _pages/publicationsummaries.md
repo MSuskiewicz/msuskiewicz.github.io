@@ -7,6 +7,23 @@ author_profile: true
 
 Here I will share short informal discussions of the most recent papers (and maybe also some older ones).
 
+A new class of inherently efficient SUMOylation substrates
+------
+Cisse, E.H., Visticot, L., Cepa, R., Mishra, A., Coste, F., Goffinont, S., Mance, L., Battault, S., Guigneau, D., Talhaoui, I., Castaing, B., Aucagne, V., Defossez, P.-A., *Suskiewicz, M.J.*✉ A new class of inherently efficient SUMOylation substrates. *bioRxiv* (2026).
+<a href="https://www.biorxiv.org/content/10.64898/2026.09.10.750468v1">Link to the article</a>
+
+Happy to share our preprint on a subset of ZBTB BTB domains as highly efficient natural SUMO 'supersubstrates'. The work was spearheaded by a great postdoc, El Hadji Cisse, with input from other team members and in collaboration with the groups of Pierre-Antoine Defossez and Vincent Aucagne.
+
+In an AlphaFold interaction screen, we found the SUMO E2 UBC9 as a potential binder to the BTB domain of ZBTB38. The predicted binding surface is conserved and positions K43 of ZBTB38 within the UBC9 active site. We reconstituted and validated the interaction with SEC and ITC. Strikingly, the SUMOylation of the ZBTB38 BTB is as efficient and complete under our conditions in vitro as that of RANGAP1, so far known as the best modified SUMO substrate. We can also detect endogenous modification of full-length ZBTB38 in cells by western blot and show that it depends on K43.
+
+This property extends to five human ZBTB proteins (ZBTB38, 4, 33, 21 and 14). This work continues from our <a href="https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00476-3">previous study</a>, where we found that the BTB domains of around 20 different ZBTB proteins form filaments. Now we show that five other ZBTB proteins undergo efficient SUMOylation. Functional aspects of the SUMOylation of one of them, ZBTB33 (Kaiso), have been studied in cells in <a href="https://www.nature.com/articles/s41418-018-0078-7">this previous study</a> – do have a look!
+
+General conclusions? Efficient SUMOylation emerges as a new function of (some) BTB domains. Our results also support the hypothesis that structural SUMOylation motifs, pre-organised for productive UBC9 engagement, may be more efficiently modified than typical flexible SUMOylation motifs. This might apply to other PTMs, too.
+
+The manuscript is currently in revision, and we thank the Editor and Reviewers for their input – the paper will further improve!
+
+I thank El Hadji and all co-authors from our team; Vincent Aucagne; and especially the Defossez lab, who performed the work in cells. Thanks also to the ERC, the ANR and other funders, and of course to our institute, the CBM. El Hadji, who is great and has a rare combination of chemistry and biochemistry skills, has more almost-finished projects up his sleeve and is looking for jobs or fellowships!
+
 Filament formation and NAD processing by noncanonical human FAM118 sirtuins 
 ------
 Baretić, D.✱, Missoury, S.✱, Patel, K., Martinez, M., Coste, F., Zhu, K., Smith, R., Kopasz, A. G., Yang, L., Bigot, N., Chapuis, C., Riou, R., Đukić, N., Goffinont, S., Pressoir, V., Patačko, S., Timinszky, G., Delarue, M., Castaing, B., Ahel, D., Mikoč, A., Huet, S.✉, Ahel, I.✉ & Suskiewicz, M.J.✉<br />
