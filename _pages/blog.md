@@ -23,6 +23,14 @@ I’m currently obsessively reading about filaments, multimers, condensates, and
 
 In the paper, I liked especially the structures (every crystal structure is a kind of little miracle) and their detailed descriptions. Interestingly, the authors see what they describe as 'anion:pi stacking' -- and it does look as if an anionic carboxylate group is located above the centre of a Tyr aromatic ring -- but I am not sure anion:pi (ulike the common cation:pi) stacking is a thing, unless specifically in such DNA-base-proximal environments? Another key intermolecular contact is a kind of Pro:Pro hydrophobic packing that one does see sometimes in structures -- it would be interesting to do a survey of such contacts in proteins (I haven't seen any, unlike Pro:aromatic).
 
+Sensing salicylic acid through gene expression activation (20/09/2026)
+------
+It's always a treat to actually sit down and read a paper. <a href="https://www.nature.com/articles/s41586-026-11021-5">This one</a>'s really nice. Unlike some plant hormones such as auxins that act through ubiquitylation + protein degradation, salicylic acid (SA) activates gene expression via its receptor/transcription factor NPR1. The paper elucidates the underlying mechanism.
+
+First the authors use AlphaFold to screen previously identified candidate interactors of NPR1. They identify a potential direct interaction with the Mediator complex subunit MED15A, and show experimentally that SA binding to NPR1 stabilises the NPR1:MED15A interaction. This results in a connection between the DNA-bound NPR1 and the whole Mediator complex, which then brings in RNA polymerase II to transcribe nearby genes. A nice mechanism supported by various biophysical techniques and a cryoEM structure of the NPR1:SA:MED15A complex.
+
+Next, I have to look at some point into the back-to-back story, <a href="https://www.nature.com/articles/s41586-026-11123-0">Mechanisms of Transcriptional Regulation by Salicylic Acid Receptors</a>, also published in <i>Nature</i>.
+
 Review about FOXP3 and AIRE (14/08/2026)
 ------
 I was so happy to read <a href="https://www.nature.com/articles/s41590-026-02483-w">this review</a> in full yesterday. The less time I have for reading, the more I value the reading - it feels like with every sentence you learn something and start having your own questions and ideas. At least when a paper (or a review) is solid and inspiring, like this one is. I have been following the work from the Sun Hur lab on FOXP3 and AIRE, but it's nice to have it gathered and discussed together - including the very recent papers I missed. FOXP3 and AIRE are immunity-related transcriptional regulators, and both homo-multimerise in interesting ways. I am interested in multimerising, filament-forming proteins - especially transcription factors - so all this is super inspiring to me.
