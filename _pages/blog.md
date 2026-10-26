@@ -11,6 +11,22 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Multimers, SUMOylation, and other good things (26/10/2026)
+------
+I've just read <a href="https://doi.org/10.1038/s41556-026-01916-w">this paper from Jacob Corn's lab</a> (finally, after months since bookmarking...), and it's definitely one of my favourite papers in recent months. So rich in data - and interesting conceptually, too. And it's at the crossroads of many areas most dear to me: SUMOylation, multimerisation, DNA repair...
+
+In short, it identifies SP100:SP110 as a sort of toxin-antitoxin pair (but in human cells), with SP100 causing cell death by homo-multimerising into filaments and thus somehow changing the PML bodies (nuclear subcompartments to which it localises), such that they stay on chromosomes during mitosis. SP100 does that through its CARD domain, and this study finally explains why SP100 has a domain associated evolutionarily with caspases, cell death, and immunity - because one function of SP100 might be cell death induction in some immunity-related contexts? Having said that, cell death is what SP100 causes when its partner - SP110 - is absent (and normally it isn't absent, and is co-induced together with SP100 by interferon), so I am not sure to what extent SP100 ever causes cell death in normal cells. Anyway...
+
+The antitoxin of the system is SP110, seemingly a paralogue of SP100 with similar domains including CARD - but rather than being redundant functionally, it keeps SP100 in check by dimerising with it and blocking filament formation (and thus blocking PML body retention on chromosomes and cell death). BTW, it reminds me of <a href="https://doi.org/10.1016/j.cell.2004.07.010">this old paper</a> where the Drosophila protein Yan polymerises through its SAM domain, while another protein, Mae, competes with that process through its SAM domain.
+
+There is a place for SUMOylation in the study, too. SP100 famously has a SIM and a SUMOylation site, and PML bodies - to which it belongs and which it apparently regulates - are a SUMO hub. It turns out the SIM in SP100 is necessary for lethality, but SUMOylation of SP100 counteracts lethality. Both SP110 and SUMOylation of SP100 act in parallel to counteract SP100's toxic behaviour - so SP110 becomes more important in SUMOylation-deficient cells. Finally there's an explanation why SP110 was a hit in a CRISPR screen for sensitivity to a SUMO inhibitor from Durocher's lab (Cho et al., 2024).
+
+So to sum up, the way I understand the paper is that PML bodies must let go of chromosomes in mitosis, and this depends on SP110 and SUMOylation interfering with SP100 multimerisation. Most of the time the expression of SP110 and SP100 is correlated and the system is kept in check, but perhaps sometimes, when imbalanced, the system triggers cell death 'on purpose', the way we think of toxin-antitoxin systems in bacteria, as a sort of sensitive rheostat.
+
+Lastly, we in our team are interested in transcription factors that multimerise or form filaments, and SP100 is sometimes called a transcription factor. The authors show that the transcriptional function doesn't contribute to the lethality - but they do also show that SP100 multimerisation via its CARD domain affects the distribution of SP100 across chromatin and expression of some genes.
+
+Congratulations to the authors!
+
 FLI1 and other 'nucleoprotein filaments' (12/10/2026)
 ------
 I’ve just read <a href="https://academic.oup.com/nar/article-abstract/53/6/gkaf205/8093172">a paper about cooperative binding of the DNA-binding domain (DBD) of FLI1 to GGAA-repeat DNA</a>, from Hou and Tsodikov (nice work!). It includes crystal structures with 2x, 3x, and 4xGGAA, as well as EMSAs and fluorescence polarisation, together showing that on repetitive DNA each FLI1 DBD copy contacts the next and the next+1, which gives rise to cooperativity and increased affinity.
