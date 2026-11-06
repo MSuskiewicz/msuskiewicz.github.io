@@ -11,6 +11,18 @@ redirect_from:
 
 Chances are that this blog will die at some point. But it's a risk I'm willing to take. I will write here short notes, mostly, I guess, on scientific articles I've read.
 
+Oligomerising IDRs in TFs and drugging protein disorder (06/11/2026)
+------
+<a href="https://www.science.org/doi/10.1126/sciadv.adz7400">My latest read</a>, which I much enjoyed. I stumbled upon it because of my interest in transcription factor (TF) multimerisation. It focuses on multimerisation of TF IDRs, not folded domains like us, but is really inspiring nonetheless. In short (if I understand correctly): the long IDR of androgen receptor oligomerises via segments with alpha-helical propensity and aromatic content. This oligomeric form is favoured - and promoted - by a drug candidate interacting with the IDR both noncovalently and covalently (via Cys).
+
+It is surprising that an IDR might be druggable, but in a way their data are consistent with the canonical paradigm where small molecules require structured sites: even if the target is an IDR, the interaction is mainly with its oligomer, which has higher (even if still partial) helical propensity. The binding is still weak (probably millimolar), but combined with the tendency to make an eventual covalent attachment - seems enough.
+
+I have never worked hands on with NMR, and because of the techniques I use (originally crystallography), I always focused more on folded domains. But I do see that - perhaps especially after AlphaFold? - we must focus more on less structured and more weakly interacting regions, and for this NMR seems best suited. This paper reminded me of <a href="https://www.nature.com/articles/s41594-024-01339-x">this older one</a>, which I discussed here some time ago.
+
+Another cool aspect of the current paper: aromatic residues, and the role aromaticity seems to play in oligomerisation. It reminded me of how not long ago we mutated a single Leu to Phe on a protein surface and it crystallised in a different spacegroup, with crystal contacts mediated via the Phe. And then there is <a href="https://www.nature.com/articles/nature23320">this paper</a>, Fig. 1, where introducing aromatics makes proteins stack into chains inside cells. Adding to all this, the current paper shows that also within IDRs aromatics are key to self-association, to the extent that it exists in these regions.
+
+Why should these aromatic IDRs preferentially self-interact rather than interacting other things in the cell? Perhaps the answer is: consider the full-length context. E.g. androgen receptor has canonical dimerisation interfaces within its folded domains that may provide initial specific self-association - to which various weaker interactions would then add? One of the things the paper made me think about... Anyway, I much enjoyed this well written and illustrated study. Congratulations to the Authors!
+
 Multimers, SUMOylation, and other good things (26/10/2026)
 ------
 I've just read <a href="https://doi.org/10.1038/s41556-026-01916-w">this paper from Jacob Corn's lab</a> (finally, after months since bookmarking...), and it's definitely one of my favourite papers in recent months. So rich in data - and interesting conceptually, too. And it's at the crossroads of many areas most dear to me: SUMOylation, multimerisation, DNA repair...
