@@ -11,11 +11,11 @@ Protein post-translational modifications and DNA repair: structure, function, an
 ------
 I'm very lucky to be a member of the research group "Protein post-translational modifications and DNA repair: structure, function, and dynamics" at the CBM, Orléans, France. Since January 2023, I serve as a co-leader of this group, together with its long-time leader, Bertrand Castaing. A part of the group is implicated in the "SUMOwriteNread" project, which I independently supervise.
 
-The current (12/09/2025) members of the group (including permanent members, postdocs, and PhD students), in an alphabetical order (acc. to first name), are: Aanchal Mishra (2nd year PhD), Ana Gil Quevedo (1st year PhD), Aranyadp Gayen (postdoc), Astride Matéo (new PhD), Bertrand Castaing (research director, team leader), El Hadji Cisse (postdoc), Franck Coste (research engineer), Ibtissam Talhaoui (researcher), Marcin Suskiewicz (researcher, team co-leader), Lucija Mance (3rd year PhD), Norbert Garnier (university lecturer), Stéphane Goffinont (engineer), Stéphane Koundrioukoff (university professor), Virginie Gaudon (assistant engineer).
+The current (07/11/2026) members of the group (including permanent members, postdocs, and PhD students), in an alphabetical order (acc. to first name), are: Aanchal Mishra (3rd year PhD), Ana Gil Quevedo (2nd year PhD), Anaïs Mada (1st year PhD), Aranyadp Gayen (postdoc), Astride Matéo (2nd year PhD), Bertrand Castaing (research director, team co-leader), Cristine Goncalves (engineer), El Hadji Cisse (postdoc), Franck Coste (research engineer), Ibtissam Talhaoui (researcher), Marcin Suskiewicz (researcher, team co-leader), Lucija Mance (postdoc), Norbert Garnier (university lecturer, emeritus), Sophia Missoury (postdoc), Stella Hillman (1st year PhD, collaboration Brazil-France), Stéphane Goffinont (engineer), Stéphane Koundrioukoff (university professor), Virginie Gaudon (assistant engineer).
 
 A group photo from early 2026:
 
-<img src="https://msuskiewicz.github.io/images/team-photo.jpg" width='550' />
+<img src="https://msuskiewicz.github.io/images/team-photo.JPG" width='550' />
 
 A group photo from a group lunch in autumn 2024:
 
